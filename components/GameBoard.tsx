@@ -188,7 +188,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
                     <img
                       src={getCharacterImage(teamNumber)}
                       alt={`${teamNumber}조`}
-                      className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-lg"
+                      className="w-10 h-10 md:w-[50px] md:h-[50px] object-contain drop-shadow-lg"
                       onError={(e) => {
                         // Fallback to numbered circle if image fails
                         e.currentTarget.style.display = 'none';

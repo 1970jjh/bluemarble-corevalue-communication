@@ -1308,6 +1308,19 @@ const App: React.FC = () => {
           // 역량카드 미리보기 표시
           setPendingSquare(landingSquare);
           setShowCompetencyPreview(true);
+
+          // 3초 후 자동으로 진행 (모바일에서 주사위 굴린 경우 대비)
+          setTimeout(() => {
+            // 아직 미리보기가 표시 중이면 자동으로 진행
+            setShowCompetencyPreview(prev => {
+              if (prev) {
+                const updatedTeam = { ...teamToMove, position: finalPos };
+                handleLandOnSquare(updatedTeam, finalPos);
+                return false;
+              }
+              return prev;
+            });
+          }, 3000);
         } else {
           // 일반 칸은 바로 handleLandOnSquare 호출
           setTimeout(() => {
