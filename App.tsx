@@ -1175,8 +1175,12 @@ const App: React.FC = () => {
     setDiceValue(pendingDice);
 
     // 더블 체크 및 음향 효과
-    if (pendingDice[0] === pendingDice[1]) {
+    const isDouble = pendingDice[0] === pendingDice[1];
+    setIsDoubleChance(isDouble);  // 더블 찬스 설정 (AI 점수 2배 적용)
+
+    if (isDouble) {
       soundEffects.playDoubleBonus();
+      addLog(`🎲 더블 찬스! (${pendingDice[0]}+${pendingDice[1]}) AI 평가 점수 2배 적용!`);
     } else {
       soundEffects.playDiceResult();
     }
@@ -1721,7 +1725,23 @@ const App: React.FC = () => {
       position: currentTeam.position  // 현재 위치 저장 (이미 푼 카드 체크용)
     };
 
-    const scoreChanges = aiEvaluationResult.scoreChanges;
+    const baseScoreChanges = aiEvaluationResult.scoreChanges;
+
+    // 더블 찬스: 모든 점수 2배 적용 (양수든 음수든)
+    const multiplier = isDoubleChance ? 2 : 1;
+    const scoreChanges = {
+      capital: baseScoreChanges.capital !== undefined ? baseScoreChanges.capital * multiplier : undefined,
+      energy: baseScoreChanges.energy !== undefined ? baseScoreChanges.energy * multiplier : undefined,
+      reputation: baseScoreChanges.reputation !== undefined ? baseScoreChanges.reputation * multiplier : undefined,
+      trust: baseScoreChanges.trust !== undefined ? baseScoreChanges.trust * multiplier : undefined,
+      competency: baseScoreChanges.competency !== undefined ? baseScoreChanges.competency * multiplier : undefined,
+      insight: baseScoreChanges.insight !== undefined ? baseScoreChanges.insight * multiplier : undefined,
+    };
+
+    if (isDoubleChance) {
+      addLog(`🎲 더블 찬스 적용! 모든 점수 x2 (기존 점수의 2배)`);
+    }
+
     const updatedTeams = currentSession.teams.map((team, idx) => {
       // 현재 팀: 점수와 히스토리 업데이트 + 멤버 인덱스 회전
       if (team.id === currentTeam.id) {
@@ -1765,6 +1785,7 @@ const App: React.FC = () => {
     setIsSaving(false);
     setSpectatorVotes({});  // 관람자 투표 초기화
     setMySpectatorVote(null);  // 내 투표 초기화
+    setIsDoubleChance(false);  // 더블 찬스 초기화
     setGamePhase(GamePhase.Idle);
     setTurnTimeLeft(120);
 
@@ -2257,6 +2278,7 @@ const App: React.FC = () => {
             spectatorVotes={spectatorVotes}
             spectatorVote={mySpectatorVote}
             onSpectatorVote={(choice) => handleSpectatorVote(choice, participantTeam.name)}
+            isDoubleChance={isDoubleChance}
           />
         )}
 
@@ -2419,6 +2441,7 @@ const App: React.FC = () => {
           isTeamSaved={isTeamSaved}
           onAISubmit={handleAdminAISubmit}
           spectatorVotes={spectatorVotes}
+          isDoubleChance={isDoubleChance}
         />
       )}
 

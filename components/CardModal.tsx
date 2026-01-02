@@ -35,6 +35,8 @@ interface CardModalProps {
   // 관람자 개인 투표 (readOnly 모드에서 사용)
   spectatorVote?: Choice | null;
   onSpectatorVote?: (choice: Choice) => void;
+  // 더블 찬스 (AI 점수 2배)
+  isDoubleChance?: boolean;
 }
 
 const CardModal: React.FC<CardModalProps> = ({
@@ -57,7 +59,8 @@ const CardModal: React.FC<CardModalProps> = ({
   onAISubmit,
   spectatorVotes = {},
   spectatorVote,
-  onSpectatorVote
+  onSpectatorVote,
+  isDoubleChance = false
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -126,6 +129,11 @@ const CardModal: React.FC<CardModalProps> = ({
               {isPreviewMode && (
                 <div className="inline-block bg-orange-500 text-white px-2 py-1 text-xs font-bold uppercase animate-pulse">
                   PREVIEW MODE
+                </div>
+              )}
+              {isDoubleChance && !isPreviewMode && (
+                <div className="inline-block bg-yellow-400 text-black px-2 py-1 text-xs font-black uppercase animate-bounce border-2 border-black">
+                  🎲 DOUBLE CHANCE x2
                 </div>
               )}
             </div>
