@@ -1461,16 +1461,25 @@ const App: React.FC = () => {
         }
 
         CRITICAL SCORING PRINCIPLES:
+        **FIRST: CHECK FOR LOW-EFFORT/INSINCERE RESPONSES**
+        - If the reasoning is less than 10 characters, random letters (like "asdf", "sdaf", "ㅁㄴㅇㄹ"),
+          or clearly meaningless (numbers only, repeated characters, gibberish),
+          IMMEDIATELY give ALL NEGATIVE scores: -5 to -10 in EVERY category.
+        - Short, lazy answers like "몰라", "그냥", "ㅇㅇ", "ok", single words without explanation
+          should receive -3 to -6 in every category.
+        - The feedback should clearly state: "성의 없는 응답입니다. 구체적인 이유를 작성해주세요."
+
         1. ALWAYS identify BOTH advantages AND disadvantages/trade-offs of the choice.
         2. Score Range: Each category should be between -10 to +10.
            - +8~+10: Exceptional strategic thinking with minimal downsides
            - +4~+7: Good decision but with notable trade-offs
            - 0~+3: Average or neutral impact
            - -3~-1: Poor decision with some merit
-           - -10~-4: Seriously flawed approach
+           - -10~-4: Seriously flawed approach OR low-effort response
         3. Total score for sincere, well-reasoned answers should be POSITIVE (+8 to +20 total).
         4. Do NOT give all positive scores. Every choice has opportunity costs or potential risks - reflect them.
         5. Be specific about what could go wrong or what was sacrificed by this choice.
+        6. RESPONSE QUALITY MATTERS: A good choice with poor reasoning deserves LOWER scores than a mediocre choice with excellent reasoning.
 
         Evaluation Rules by Card Type:
         1. IF Card Type is 'Event' (Chance/Golden Key):
@@ -1801,16 +1810,25 @@ const App: React.FC = () => {
         }
 
         CRITICAL SCORING PRINCIPLES:
+        **FIRST: CHECK FOR LOW-EFFORT/INSINCERE RESPONSES**
+        - If the reasoning is less than 10 characters, random letters (like "asdf", "sdaf", "ㅁㄴㅇㄹ"),
+          or clearly meaningless (numbers only, repeated characters, gibberish),
+          IMMEDIATELY give ALL NEGATIVE scores: -5 to -10 in EVERY category.
+        - Short, lazy answers like "몰라", "그냥", "ㅇㅇ", "ok", single words without explanation
+          should receive -3 to -6 in every category.
+        - The feedback should clearly state: "성의 없는 응답입니다. 구체적인 이유를 작성해주세요."
+
         1. ALWAYS identify BOTH advantages AND disadvantages/trade-offs of the choice.
         2. Score Range: Each category should be between -10 to +10.
            - +8~+10: Exceptional strategic thinking with minimal downsides
            - +4~+7: Good decision but with notable trade-offs
            - 0~+3: Average or neutral impact
            - -3~-1: Poor decision with some merit
-           - -10~-4: Seriously flawed approach
+           - -10~-4: Seriously flawed approach OR low-effort response
         3. Total score for sincere, well-reasoned answers should be POSITIVE (+8 to +20 total).
         4. Do NOT give all positive scores. Every choice has opportunity costs or potential risks - reflect them.
         5. Be specific about what could go wrong or what was sacrificed by this choice.
+        6. RESPONSE QUALITY MATTERS: A good choice with poor reasoning deserves LOWER scores than a mediocre choice with excellent reasoning.
 
         Evaluation Rules by Card Type:
         1. IF Card Type is 'Event' (Chance/Golden Key):
