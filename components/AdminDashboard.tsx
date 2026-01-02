@@ -3,7 +3,8 @@ import {
   GameCard,
   CompetencyInfo,
   GameVersion,
-  Choice
+  Choice,
+  SquareType
 } from '../types';
 import {
   CORE_VALUE_CARDS,
@@ -55,14 +56,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const modeCards = gameMode === GameVersion.CoreValue
       ? CORE_VALUE_CARDS
       : COMMUNICATION_CARDS;
+    const modeType = gameMode === GameVersion.CoreValue ? 'CoreValue' : 'Communication';
 
     // 보드 순서에 따라 역량 카드 정렬
     const sortedCompetencyCards: ExtendedGameCard[] = [];
     const usedCardIds = new Set<string>();
 
-    // 보드 칸 순서대로 카드 추가
+    // 1. 현재 모드에 해당하는 보드 칸의 카드 추가 (직접 배정된 역량)
     BOARD_SQUARES.forEach(square => {
-      if (square.competency) {
+      if (square.competency && square.module === modeType) {
         const card = modeCards.find(c => c.competency === square.competency);
         if (card && !usedCardIds.has(card.id)) {
           const competencyInfo = COMPETENCY_INFO.find(c => c.id === card.competency);
@@ -77,7 +79,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
     });
 
-    // 보드에 없는 나머지 역량 카드 추가
+    // 2. 반대 모드의 보드 칸에 나머지 역량 카드 배정
+    const oppositeSquares = BOARD_SQUARES
+      .filter(sq => sq.type === SquareType.City && sq.module !== modeType)
+      .sort((a, b) => a.index - b.index);
+
+    const remainingCards = modeCards.filter(card => !usedCardIds.has(card.id));
+
+    oppositeSquares.forEach((square, idx) => {
+      if (idx < remainingCards.length) {
+        const card = remainingCards[idx];
+        const competencyInfo = card.competency ? COMPETENCY_INFO.find(c => c.id === card.competency) : null;
+        sortedCompetencyCards.push({
+          ...card,
+          competencyNameKo: competencyInfo?.nameKo || '',
+          competencyNameEn: competencyInfo?.nameEn || '',
+          boardIndex: square.index  // 반대 모드 칸 인덱스
+        });
+        usedCardIds.add(card.id);
+      }
+    });
+
+    // 3. 혹시 아직 추가되지 않은 카드가 있으면 추가 (보드 인덱스 없이)
     modeCards.forEach(card => {
       if (!usedCardIds.has(card.id)) {
         const competencyInfo = card.competency ? COMPETENCY_INFO.find(c => c.id === card.competency) : null;
@@ -87,6 +110,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           competencyNameEn: competencyInfo?.nameEn || ''
         });
       }
+    });
+
+    // 4. 전체 카드를 보드 인덱스 순서로 정렬
+    sortedCompetencyCards.sort((a, b) => {
+      if (a.boardIndex !== undefined && b.boardIndex !== undefined) {
+        return a.boardIndex - b.boardIndex;
+      }
+      if (a.boardIndex !== undefined) return -1;
+      if (b.boardIndex !== undefined) return 1;
+      return 0;
     });
 
     // 이벤트 카드 추가 (역량 정보 없음)
@@ -406,7 +439,7 @@ JSON만 응답하세요.`;
         {/* 카드 목록 */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="text-sm text-gray-500 mb-4">
-            총 {filteredCards.length}개 카드 (역량 카드 22개 + 이벤트 카드 8개)
+            총 {filteredCards.length}개 카드 (역량 카드 22개 + 이벤트 카드 9개)
           </div>
 
           <div className="space-y-3">

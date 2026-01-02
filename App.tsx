@@ -1636,12 +1636,54 @@ const App: React.FC = () => {
       return eventCandidates.length > 0 ? eventCandidates[Math.floor(Math.random() * eventCandidates.length)] : undefined;
     };
 
+    // 현재 모드의 보드 칸에 배정되지 않은 역량 카드 찾기 (반대 모드 칸 클릭 시 사용)
+    const getUnmappedCompetencyCards = () => {
+      // 현재 모드에서 보드에 배정된 역량 ID 목록
+      const boardCompetencies = BOARD_SQUARES
+        .filter(sq => sq.competency && sq.module === sessionCardType)
+        .map(sq => sq.competency);
+
+      // 배정되지 않은 역량 카드들
+      const unmappedCards = modeCards.filter(c =>
+        c.competency && !boardCompetencies.includes(c.competency)
+      );
+
+      // 커스텀 카드에서도 확인
+      if (sessionCards.length > 0) {
+        const unmappedCustomCards = sessionCards.filter(c =>
+          (c.type === sessionCardType || c.type === 'CoreValue' || c.type === 'Communication') &&
+          c.competency && !boardCompetencies.includes(c.competency)
+        );
+        return unmappedCustomCards.length > 0 ? unmappedCustomCards : unmappedCards;
+      }
+
+      return unmappedCards;
+    };
+
     switch (square.type) {
       case SquareType.City:
         // 역량(competency)에 맞는 카드 선택
         cardToPreview = allCards.find(c => c.competency === square.competency);
         if (!cardToPreview) {
           cardToPreview = modeCards.find(c => c.competency === square.competency);
+        }
+
+        // 반대 모드 칸 클릭 시 (해당 역량 카드가 없는 경우), 배정되지 않은 역량 카드 중 하나 표시
+        if (!cardToPreview && square.module !== sessionCardType) {
+          const unmappedCards = getUnmappedCompetencyCards();
+          if (unmappedCards.length > 0) {
+            // 보드 인덱스 기반으로 일관된 카드 선택 (같은 칸은 항상 같은 카드)
+            const oppositeSquares = BOARD_SQUARES
+              .filter(sq => sq.type === SquareType.City && sq.module !== sessionCardType)
+              .sort((a, b) => a.index - b.index);
+            const squareOrder = oppositeSquares.findIndex(sq => sq.index === index);
+            if (squareOrder >= 0 && squareOrder < unmappedCards.length) {
+              cardToPreview = unmappedCards[squareOrder];
+            } else {
+              // fallback: 랜덤 선택
+              cardToPreview = unmappedCards[Math.floor(Math.random() * unmappedCards.length)];
+            }
+          }
         }
         break;
       case SquareType.GoldenKey:
@@ -1660,8 +1702,11 @@ const App: React.FC = () => {
         cardToPreview = findCardByType('Challenge');
         break;
       case SquareType.WorldTour:
-        // 특별 이벤트 - Event 카드
-        cardToPreview = findCardByType('Event');
+        // 특별 이벤트 - Special 또는 Event 카드
+        cardToPreview = findCardByType('Special');
+        if (!cardToPreview) {
+          cardToPreview = findCardByType('Event');
+        }
         break;
       case SquareType.Island:
         // 번아웃 - Burnout 카드
