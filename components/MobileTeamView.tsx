@@ -313,7 +313,7 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
 
       {/* Resources Grid */}
       <div className="grid grid-cols-3 gap-3">
-        <StatBox icon={Coins} value={team.resources.capital} label="Capital" color="text-yellow-600" max={100} />
+        <StatBox icon={Coins} value={team.resources.capital} label="Resource" color="text-yellow-600" max={100} />
         <StatBox icon={Battery} value={team.resources.energy} label="Energy" color="text-orange-500" max={100} />
         <StatBox icon={Handshake} value={team.resources.trust} label="Trust" color="text-blue-500" max={100} />
         <StatBox icon={TrendingUp} value={team.resources.competency} label="Skill" color="text-green-600" max={100} />

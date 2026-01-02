@@ -67,10 +67,10 @@ const TeamStatus: React.FC<TeamStatusProps> = ({ team, active }) => {
       </div>
 
       <div className="p-2 space-y-1">
-        {/* Capital Display */}
+        {/* Resource (Time) Display */}
         <div className="mb-1">
           <div className="flex justify-between text-[10px] font-bold text-black mb-0.5 uppercase tracking-tighter">
-            <span className="flex items-center gap-0.5"><Coins size={10} className="stroke-[3]" /> Capital</span>
+            <span className="flex items-center gap-0.5"><Coins size={10} className="stroke-[3]" /> Resource</span>
             <span className={`font-mono ${team.resources.capital < 0 ? 'text-red-600' : ''}`}>{team.resources.capital}/100</span>
           </div>
           <div className="h-2 w-full bg-white border border-black relative">

@@ -1303,7 +1303,7 @@ const App: React.FC = () => {
               newResources.competency += LAP_BONUS.competency; // +10
               newResources.insight += LAP_BONUS.insight;      // +10
 
-              addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 자본금+20, 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
+              addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 자원(시간)+20, 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
 
               return { ...t, resources: newResources, lapCount: newLapCount };
             }
@@ -1339,7 +1339,7 @@ const App: React.FC = () => {
                 newResources.competency += LAP_BONUS.competency;
                 newResources.insight += LAP_BONUS.insight;
 
-                addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 자본금+20, 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
+                addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 자원(시간)+20, 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
 
                 return { ...t, position: finalPos, resources: newResources, lapCount: newLapCount };
               }
@@ -1621,9 +1621,19 @@ const App: React.FC = () => {
 
         5. General (Self, Team, Leader, Follower types):
            - Identify at least ONE negative impact or risk from the choice.
-           - If resources are spent, deduct Capital.
-           - If the approach is time/effort intensive, consider Energy cost.
            - If the choice might damage relationships, reflect in Trust.
+
+        **MANDATORY RESOURCE & ENERGY CONSUMPTION RULE:**
+        IMPORTANT: Almost ALL activities in real workplace require TIME and EFFORT.
+        - Resource (capital) represents TIME investment. Most decisions require time to implement.
+          → Give -1 to -5 Resource for activities that take significant time (meetings, projects, training)
+          → Only give +Resource if the decision explicitly SAVES time or gains resources
+        - Energy represents PHYSICAL/EMOTIONAL effort. Most decisions require energy to execute.
+          → Give -1 to -5 Energy for activities requiring effort, emotional labor, or concentration
+          → Only give +Energy if the decision explicitly reduces workload or provides rest
+        - Be REALISTIC: A decision to "work harder", "have more meetings", "take on more responsibility"
+          should ALWAYS have negative Resource and/or Energy scores, even if the outcome is positive.
+        - Trade-off principle: Good decisions often sacrifice Resource/Energy for Trust, Competency, or Insight gains.
 
         Feedback Format (in Korean) - USE CLEAR SECTION MARKERS:
         **[장점]** What was good about the decision (1-2 sentences)
@@ -1674,7 +1684,7 @@ const App: React.FC = () => {
       // 리포트용 AI 평가 결과 로그
       const scores = result.scoreChanges;
       addLog(`🤖 [AI 분석] ${result.feedback}`);
-      addLog(`📊 [점수변화] 자본:${scores.capital || 0} | 에너지:${scores.energy || 0} | 신뢰:${scores.trust || 0} | 역량:${scores.competency || 0} | 통찰:${scores.insight || 0}`);
+      addLog(`📊 [점수변화] 자원(시간):${scores.capital || 0} | 에너지:${scores.energy || 0} | 신뢰:${scores.trust || 0} | 역량:${scores.competency || 0} | 통찰:${scores.insight || 0}`);
       addLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
     } catch (e) {
@@ -1970,9 +1980,19 @@ const App: React.FC = () => {
 
         5. General (Self, Team, Leader, Follower types):
            - Identify at least ONE negative impact or risk from the choice.
-           - If resources are spent, deduct Capital.
-           - If the approach is time/effort intensive, consider Energy cost.
            - If the choice might damage relationships, reflect in Trust.
+
+        **MANDATORY RESOURCE & ENERGY CONSUMPTION RULE:**
+        IMPORTANT: Almost ALL activities in real workplace require TIME and EFFORT.
+        - Resource (capital) represents TIME investment. Most decisions require time to implement.
+          → Give -1 to -5 Resource for activities that take significant time (meetings, projects, training)
+          → Only give +Resource if the decision explicitly SAVES time or gains resources
+        - Energy represents PHYSICAL/EMOTIONAL effort. Most decisions require energy to execute.
+          → Give -1 to -5 Energy for activities requiring effort, emotional labor, or concentration
+          → Only give +Energy if the decision explicitly reduces workload or provides rest
+        - Be REALISTIC: A decision to "work harder", "have more meetings", "take on more responsibility"
+          should ALWAYS have negative Resource and/or Energy scores, even if the outcome is positive.
+        - Trade-off principle: Good decisions often sacrifice Resource/Energy for Trust, Competency, or Insight gains.
 
         Feedback Format (in Korean) - USE CLEAR SECTION MARKERS:
         **[장점]** What was good about the decision (1-2 sentences)

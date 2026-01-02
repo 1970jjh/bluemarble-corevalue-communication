@@ -73,7 +73,7 @@ const LapBonusPopup: React.FC<LapBonusPopupProps> = ({
   if (!visible) return null;
 
   const bonusItems = [
-    { icon: Coins, label: '자본금', value: bonuses.capital, color: 'text-yellow-400' },
+    { icon: Coins, label: '자원(시간)', value: bonuses.capital, color: 'text-yellow-400' },
     { icon: Battery, label: '에너지', value: bonuses.energy, color: 'text-orange-400' },
     { icon: Handshake, label: '신뢰', value: bonuses.trust, color: 'text-blue-400' },
     { icon: TrendingUp, label: '역량', value: bonuses.competency, color: 'text-green-400' },

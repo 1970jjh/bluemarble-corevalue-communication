@@ -75,7 +75,7 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
 
   const barData = teams.map(t => ({
     name: t.name,
-    Capital: t.resources.capital,
+    Resource: t.resources.capital,
     Energy: t.resources.energy,
     Trust: t.resources.trust,
     Skill: t.resources.competency,
@@ -183,7 +183,7 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
 
           팀명: ${team.name}
           최종 점수: ${calculateTotal(team)}점
-          리소스 현황: 자본 ${team.resources.capital}, 에너지 ${team.resources.energy}, 신뢰 ${team.resources.trust}, 역량 ${team.resources.competency}, 통찰 ${team.resources.insight}
+          리소스 현황: 자원(시간) ${team.resources.capital}, 에너지 ${team.resources.energy}, 신뢰 ${team.resources.trust}, 역량 ${team.resources.competency}, 통찰 ${team.resources.insight}
 
           게임 기록 (각 상황에서의 옵션 선택, 선택 이유, AI 분석 결과):
           ${historyContext || '기록 없음'}
@@ -435,7 +435,7 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
                         <tr className="text-sm uppercase bg-black text-white">
                           <th className="p-2 border border-black">순위</th>
                           <th className="p-2 border border-black">팀</th>
-                          <th className="p-2 border border-black">자본</th>
+                          <th className="p-2 border border-black">자원(시간)</th>
                           <th className="p-2 border border-black">에너지</th>
                           <th className="p-2 border border-black">신뢰</th>
                           <th className="p-2 border border-black">역량</th>
@@ -478,7 +478,7 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
                         <YAxis tick={{fill: 'black', fontWeight: 'bold'}} />
                         <Tooltip contentStyle={{ border: '2px solid black', borderRadius: '0', boxShadow: '4px 4px 0 0 #000' }} />
                         <Legend />
-                        <Bar dataKey="Capital" fill="#FACC15" stackId="a" stroke="#000" strokeWidth={1} />
+                        <Bar dataKey="Resource" fill="#FACC15" stackId="a" stroke="#000" strokeWidth={1} />
                         <Bar dataKey="Energy" fill="#F97316" stackId="a" stroke="#000" strokeWidth={1} />
                         <Bar dataKey="Trust" fill="#3B82F6" stackId="a" stroke="#000" strokeWidth={1} />
                         <Bar dataKey="Skill" fill="#22C55E" stackId="a" stroke="#000" strokeWidth={1} />
@@ -593,7 +593,7 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
                          <table className="score-table w-full mb-4 text-sm">
                            <thead>
                              <tr>
-                               <th className="bg-gray-800 text-white p-2">자본</th>
+                               <th className="bg-gray-800 text-white p-2">자원(시간)</th>
                                <th className="bg-gray-800 text-white p-2">에너지</th>
                                <th className="bg-gray-800 text-white p-2">신뢰</th>
                                <th className="bg-gray-800 text-white p-2">역량</th>
