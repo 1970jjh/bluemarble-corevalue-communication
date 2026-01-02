@@ -1,5 +1,5 @@
 import React from 'react';
-import { BOARD_SQUARES, BOARD_SIZE, NEW_EMPLOYEE_BOARD_NAMES } from '../constants';
+import { BOARD_SQUARES, BOARD_SIZE, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES } from '../constants';
 import { BoardSquare, SquareType, Team, TeamColor, GameVersion } from '../types';
 
 interface GameBoardProps {
@@ -9,11 +9,24 @@ interface GameBoardProps {
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode }) => {
-  // 신입직원 모드일 때 별도 이름 사용
+  // 모드별 보드 칸 이름 가져오기
   const getSquareDisplayName = (square: BoardSquare): string => {
+    // 역량 칸이 아니면 기본 이름 사용
+    if (square.type !== SquareType.City) {
+      return square.name.split('(')[0];
+    }
+
+    // 모드별 이름 매핑 사용
+    if (gameMode === GameVersion.CoreValue || gameMode === '핵심가치') {
+      return CORE_VALUE_BOARD_NAMES[square.index] || square.name.split('(')[0];
+    }
+    if (gameMode === GameVersion.Communication || gameMode === '소통&갈등관리') {
+      return COMMUNICATION_BOARD_NAMES[square.index] || square.name.split('(')[0];
+    }
     if (gameMode === GameVersion.NewEmployee || gameMode === '신입직원 직장생활') {
       return NEW_EMPLOYEE_BOARD_NAMES[square.index] || square.name.split('(')[0];
     }
+
     return square.name.split('(')[0];
   };
 
