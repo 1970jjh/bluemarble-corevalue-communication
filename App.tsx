@@ -1302,10 +1302,21 @@ const App: React.FC = () => {
           updateTeamsInSession(updatedTeams);
         }
 
-        // 도착 칸 정보 저장 (역량카드 미리보기용)
+        // 도착 칸 정보 저장 (카드 미리보기용)
         const landingSquare = BOARD_SQUARES.find(s => s.index === finalPos);
-        if (landingSquare && landingSquare.type === SquareType.City) {
-          // 역량카드 미리보기 표시
+
+        // 미리보기를 표시할 특수 칸 타입들 (출발 칸 제외)
+        const previewSquareTypes = [
+          SquareType.City,       // 역량카드
+          SquareType.GoldenKey,  // 찬스 카드
+          SquareType.Island,     // 번아웃 존
+          SquareType.WorldTour,  // 글로벌 기회
+          SquareType.Space,      // 도전 과제
+          SquareType.Fund,       // 성장 펀드
+        ];
+
+        if (landingSquare && previewSquareTypes.includes(landingSquare.type)) {
+          // 카드 미리보기 표시
           setPendingSquare(landingSquare);
           setShowCompetencyPreview(true);
 
@@ -1322,7 +1333,7 @@ const App: React.FC = () => {
             });
           }, 3000);
         } else {
-          // 일반 칸은 바로 handleLandOnSquare 호출
+          // 출발 칸 등은 바로 handleLandOnSquare 호출
           setTimeout(() => {
             const updatedTeam = { ...teamToMove, position: finalPos };
             handleLandOnSquare(updatedTeam, finalPos);

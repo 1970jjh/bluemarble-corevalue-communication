@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { GameCard, BoardSquare } from '../types';
-import { Target, Lightbulb, Users, User, Sparkles, X } from 'lucide-react';
+import { GameCard, BoardSquare, SquareType } from '../types';
+import { Target, Lightbulb, Users, User, Sparkles, X, Zap, Flame, Globe, Rocket, TrendingUp } from 'lucide-react';
 
 interface CompetencyCardPreviewProps {
   visible: boolean;
@@ -20,7 +20,8 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
   const [showSituation, setShowSituation] = useState(false);
 
   useEffect(() => {
-    if (visible && card) {
+    // card가 없어도 square가 있으면 미리보기 표시
+    if (visible && (card || square)) {
       // 음향 효과 - 카드 등장
       try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -47,28 +48,81 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
     } else {
       setShowSituation(false);
     }
-  }, [visible, card, duration, onComplete]);
+  }, [visible, card, square, duration, onComplete]);
 
-  if (!visible || !card) return null;
+  if (!visible || (!card && !square)) return null;
 
-  const getTypeIcon = () => {
-    switch (card.type) {
-      case 'Self': return <User size={48} />;
-      case 'Team': return <Users size={48} />;
-      case 'Leader': return <Target size={48} />;
-      case 'Follower': return <Lightbulb size={48} />;
+  // 칸 타입에 따른 아이콘 반환
+  const getSquareTypeIcon = () => {
+    if (!square) return <Sparkles size={48} />;
+
+    switch (square.type) {
+      case SquareType.GoldenKey: return <Zap size={48} />;
+      case SquareType.Island: return <Flame size={48} />;
+      case SquareType.WorldTour: return <Globe size={48} />;
+      case SquareType.Space: return <Rocket size={48} />;
+      case SquareType.Fund: return <TrendingUp size={48} />;
       default: return <Sparkles size={48} />;
     }
   };
 
-  const getTypeColor = () => {
-    switch (card.type) {
-      case 'Self': return 'from-blue-600 to-blue-900';
-      case 'Team': return 'from-green-600 to-green-900';
-      case 'Leader': return 'from-red-600 to-red-900';
-      case 'Follower': return 'from-orange-600 to-orange-900';
+  // 칸 타입에 따른 색상 반환
+  const getSquareTypeColor = () => {
+    if (!square) return 'from-purple-600 to-purple-900';
+
+    switch (square.type) {
+      case SquareType.GoldenKey: return 'from-yellow-500 to-yellow-700';
+      case SquareType.Island: return 'from-red-600 to-red-900';
+      case SquareType.WorldTour: return 'from-cyan-500 to-cyan-700';
+      case SquareType.Space: return 'from-indigo-600 to-indigo-900';
+      case SquareType.Fund: return 'from-emerald-500 to-emerald-700';
       default: return 'from-purple-600 to-purple-900';
     }
+  };
+
+  // 칸 타입에 따른 라벨 반환
+  const getSquareTypeLabel = () => {
+    if (!square) return 'SPECIAL';
+
+    switch (square.type) {
+      case SquareType.City: return 'COMPETENCY';
+      case SquareType.GoldenKey: return 'CHANCE CARD';
+      case SquareType.Island: return 'BURNOUT ZONE';
+      case SquareType.WorldTour: return 'GLOBAL OPPORTUNITY';
+      case SquareType.Space: return 'CHALLENGE';
+      case SquareType.Fund: return 'GROWTH FUND';
+      default: return 'SPECIAL';
+    }
+  };
+
+  const getTypeIcon = () => {
+    // 역량카드(City)인 경우 카드 타입에 따른 아이콘
+    if (card && square?.type === SquareType.City) {
+      switch (card.type) {
+        case 'Self': return <User size={48} />;
+        case 'Team': return <Users size={48} />;
+        case 'Leader': return <Target size={48} />;
+        case 'Follower': return <Lightbulb size={48} />;
+        default: return <Sparkles size={48} />;
+      }
+    }
+    // 특수 칸인 경우 칸 타입에 따른 아이콘
+    return getSquareTypeIcon();
+  };
+
+  const getTypeColor = () => {
+    // 역량카드(City)인 경우 카드 타입에 따른 색상
+    if (card && square?.type === SquareType.City) {
+      switch (card.type) {
+        case 'Self': return 'from-blue-600 to-blue-900';
+        case 'Team': return 'from-green-600 to-green-900';
+        case 'Leader': return 'from-red-600 to-red-900';
+        case 'Follower': return 'from-orange-600 to-orange-900';
+        default: return 'from-purple-600 to-purple-900';
+      }
+    }
+    // 특수 칸인 경우 칸 타입에 따른 색상
+    return getSquareTypeColor();
   };
 
   const getCompetencyName = () => {
@@ -77,7 +131,16 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
       const match = square.name.match(/^([^(]+)/);
       return match ? match[1].trim() : square.name;
     }
-    return card.competency || card.type;
+    return card?.competency || card?.type || 'SPECIAL';
+  };
+
+  const getTypeLabel = () => {
+    // 역량카드(City)인 경우
+    if (card && square?.type === SquareType.City) {
+      return `${card.type} COMPETENCY`;
+    }
+    // 특수 칸인 경우
+    return getSquareTypeLabel();
   };
 
   return (
@@ -99,23 +162,25 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
           </div>
         </div>
 
-        {/* 역량 이름 */}
+        {/* 칸/역량 이름 */}
         <div className="text-center mb-4">
           <div className="text-white/70 text-sm uppercase tracking-widest mb-2">
-            {card.type} COMPETENCY
+            {getTypeLabel()}
           </div>
           <h2 className="text-4xl font-black text-white uppercase tracking-tight">
             {getCompetencyName()}
           </h2>
         </div>
 
-        {/* 카드 제목 */}
-        <div className="bg-white/10 border-2 border-white/30 rounded-xl p-4 text-center">
-          <div className="text-white/70 text-xs uppercase mb-1">Today's Challenge</div>
-          <h3 className="text-2xl font-bold text-white">
-            {card.title}
-          </h3>
-        </div>
+        {/* 카드 제목 (카드가 있는 경우에만) */}
+        {card && (
+          <div className="bg-white/10 border-2 border-white/30 rounded-xl p-4 text-center">
+            <div className="text-white/70 text-xs uppercase mb-1">Today's Challenge</div>
+            <h3 className="text-2xl font-bold text-white">
+              {card.title}
+            </h3>
+          </div>
+        )}
 
         {/* 로딩 바 */}
         <div className="mt-6">
