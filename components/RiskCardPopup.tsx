@@ -60,9 +60,16 @@ const RiskCardPopup: React.FC<RiskCardPopupProps> = ({
         setTimeout(() => audioContext.close(), 1500);
       } catch (e) {}
 
-      // duration 후 자동 스킵 (선택 안 하면)
+      // duration 후 자동 랜덤 양도 (선택 안 하면)
       const timer = setTimeout(() => {
-        if (!confirmed) {
+        const availableTeams = teams.filter(t => t.id !== currentTeamId);
+        if (!confirmed && availableTeams.length > 0) {
+          // 랜덤 팀 선택
+          const randomIndex = Math.floor(Math.random() * availableTeams.length);
+          const randomTeam = availableTeams[randomIndex];
+          onSelectTeam(randomTeam.id);
+        } else if (!confirmed) {
+          // 다른 팀이 없으면 건너뛰기
           onSkip();
         }
       }, duration);
@@ -73,7 +80,7 @@ const RiskCardPopup: React.FC<RiskCardPopupProps> = ({
       setSelectedTeam(null);
       setConfirmed(false);
     }
-  }, [visible, duration, onSkip, confirmed]);
+  }, [visible, duration, onSkip, onSelectTeam, confirmed, teams, currentTeamId]);
 
   if (!visible) return null;
 
@@ -205,7 +212,7 @@ const RiskCardPopup: React.FC<RiskCardPopupProps> = ({
                 />
               </div>
               <div className="text-center text-white/50 text-xs mt-2">
-                시간 내 선택하지 않으면 자동으로 건너뜁니다
+                ⚠️ 시간 내 선택하지 않으면 랜덤 팀에게 자동 양도됩니다!
               </div>
             </div>
 
