@@ -11,7 +11,7 @@ export { NEW_EMPLOYEE_CARDS } from './newEmployeeCards';
 export { EVENT_CARDS } from './eventCards';
 
 // 개별 import (내부 사용)
-import { BOARD_SQUARES, NEW_EMPLOYEE_BOARD_NAMES, CORE_VALUE_BOARD_NAMES } from './board';
+import { BOARD_SQUARES, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES } from './board';
 import { CORE_VALUE_CARDS } from './coreValueCards';
 import { COMMUNICATION_CARDS } from './communicationCards';
 import { NEW_EMPLOYEE_CARDS } from './newEmployeeCards';
@@ -167,6 +167,60 @@ export const KOREAN_TO_COMPETENCY_MAP: Record<string, string> = {
   '사회적 책임': 'social-responsibility',
 };
 
+// 소통&갈등관리 모드용 보드 이름 → competency 매핑
+export const COMMUNICATION_TO_COMPETENCY_MAP: Record<string, string> = {
+  // Communication 모드 칸 (해당 카드 제목 → competency)
+  '회의 중 폭탄 발언': 'active-listening',
+  '팀장님의 애매한 지시': 'clear-expression',
+  '화상회의 리액션': 'nonverbal-comm',
+  '후배의 황당한 보고서': 'feedback-giving',
+  '대선배의 독설': 'feedback-receiving',
+  '묘한 카톡 이모티콘': 'conflict-recognition',
+  '회의실 냉전': 'conflict-resolution',
+  '야근 떠넘기기': 'negotiation',
+  '두 친구의 곤란한 부탁': 'mediation',
+  '아이디어 도둑': 'emotional-intelligence',
+  '무한 업무 폭탄': 'assertiveness',
+  // CoreValue 모드 칸 (나머지 소통 카드)
+  '저성과자 면담': 'diplomacy',
+  '해외팀과의 미묘한 오해': 'cross-cultural-comm',
+  '동료의 냄새': 'difficult-conversation',
+  '반대하는 임원': 'persuasion',
+  '새 팀의 아웃사이더': 'rapport-building',
+  '밤 11시 카톡': 'boundary-setting',
+  '폭주하는 고객': 'de-escalation',
+  '이해 안 되는 결정': 'perspective-taking',
+  '팀장님의 문제': 'constructive-criticism',
+  '내 실수로 동료가 야근': 'apology-forgiveness',
+  '분열된 팀': 'team-harmony',
+};
+
+// 신입직원 모드용 보드 이름 → competency 매핑
+export const NEW_EMPLOYEE_TO_COMPETENCY_MAP: Record<string, string> = {
+  '엘리베이터의 함정': 'elevator-etiquette',
+  '호칭 대참사': 'honorific-usage',
+  '비즈니스 캐주얼의 배신': 'dress-code',
+  '9시 00분의 비밀': 'punctuality',
+  '퇴근 눈치 게임': 'leave-etiquette',
+  '전화벨의 공포': 'phone-etiquette',
+  '명함의 굴욕': 'business-card',
+  '파일명의 재앙': 'file-management',
+  '복합기 대란': 'office-equipment',
+  '회의록 받아쓰기': 'meeting-notes',
+  '일정 테트리스': 'schedule-management',
+  '첨부파일의 배신': 'email-attachment',
+  '참조의 비극': 'email-cc',
+  '네, 알겠습니다의 함정': 'task-clarification',
+  '중간보고의 실종': 'progress-report',
+  '실수 은폐 작전': 'mistake-handling',
+  '메신저 대참사': 'messenger-etiquette',
+  '질문의 타이밍': 'timing-sense',
+  '보고서 포맷의 세계': 'document-writing',
+  '엘리베이터 브리핑': 'verbal-report',
+  '선배의 라떼': 'senior-interaction',
+  '회식 서바이벌': 'team-dinner',
+};
+
 // 보드 칸의 모드별 competency 가져오기
 export const getCompetencyForSquare = (
   squareIndex: number,
@@ -175,20 +229,33 @@ export const getCompetencyForSquare = (
   const square = BOARD_SQUARES.find(s => s.index === squareIndex);
   if (!square || square.type !== SquareType.City) return undefined;
 
-  // 1. 해당 모드와 칸의 모듈이 일치하면 원래 competency 사용
-  if (square.module === gameMode) {
-    return square.competency;
-  }
-
-  // 2. CoreValue 모드에서 다른 모듈의 칸에 도착한 경우
+  // CoreValue 모드: 핵심가치 이름 → 핵심가치 카드 competency
   if (gameMode === 'CoreValue') {
     const koreanName = CORE_VALUE_BOARD_NAMES[squareIndex];
     if (koreanName) {
       return KOREAN_TO_COMPETENCY_MAP[koreanName] || square.competency;
     }
+    return square.competency;
   }
 
-  // 3. Communication/NewEmployee 모드는 원래 로직 유지
+  // Communication 모드: 소통 카드 제목 → 소통 카드 competency
+  if (gameMode === 'Communication') {
+    const boardName = COMMUNICATION_BOARD_NAMES[squareIndex];
+    if (boardName) {
+      return COMMUNICATION_TO_COMPETENCY_MAP[boardName] || square.competency;
+    }
+    return square.competency;
+  }
+
+  // NewEmployee 모드: 신입 카드 제목 → 신입 카드 competency
+  if (gameMode === 'NewEmployee') {
+    const boardName = NEW_EMPLOYEE_BOARD_NAMES[squareIndex];
+    if (boardName) {
+      return NEW_EMPLOYEE_TO_COMPETENCY_MAP[boardName] || square.competency;
+    }
+    return square.competency;
+  }
+
   return square.competency;
 };
 

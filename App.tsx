@@ -2606,7 +2606,7 @@ const App: React.FC = () => {
         visible={showCompetencyPreview}
         card={activeCard || (pendingSquare ?
           getModeCards(getCardTypeFromVersion(currentSession?.version))
-            .find(c => c.competency === pendingSquare.competency) || null
+            .find(c => c.competency === getCompetencyForSquare(pendingSquare.index, getCardTypeFromVersion(currentSession?.version))) || null
           : null)}
         square={pendingSquare}
         onComplete={handleCompetencyPreviewComplete}

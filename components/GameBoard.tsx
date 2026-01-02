@@ -1,5 +1,15 @@
 import React from 'react';
-import { BOARD_SQUARES, BOARD_SIZE, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES } from '../constants';
+import {
+  BOARD_SQUARES,
+  BOARD_SIZE,
+  CORE_VALUE_BOARD_NAMES,
+  COMMUNICATION_BOARD_NAMES,
+  NEW_EMPLOYEE_BOARD_NAMES,
+  CORE_VALUE_CARDS,
+  COMMUNICATION_CARDS,
+  NEW_EMPLOYEE_CARDS,
+  getCompetencyForSquare
+} from '../constants';
 import { BoardSquare, SquareType, Team, TeamColor, GameVersion } from '../types';
 
 interface GameBoardProps {
@@ -46,6 +56,26 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
     }
 
     return square.name.split('(')[0];
+  };
+
+  // 모드별 카드 제목 가져오기 (핵심가치 모드에서 상황 카드 제목 표시용)
+  const getCardTitle = (square: BoardSquare): string | null => {
+    if (square.type !== SquareType.City) return null;
+
+    const mode = gameMode === GameVersion.CoreValue || gameMode === '핵심가치' ? 'CoreValue'
+      : gameMode === GameVersion.Communication || gameMode === '소통&갈등관리' ? 'Communication'
+      : gameMode === GameVersion.NewEmployee || gameMode === '신입직원 직장생활' ? 'NewEmployee'
+      : 'CoreValue';
+
+    const competency = getCompetencyForSquare(square.index, mode);
+    if (!competency) return null;
+
+    const cards = mode === 'CoreValue' ? CORE_VALUE_CARDS
+      : mode === 'Communication' ? COMMUNICATION_CARDS
+      : NEW_EMPLOYEE_CARDS;
+
+    const card = cards.find(c => c.competency === competency);
+    return card?.title || null;
   };
 
   const getGridStyle = (index: number) => {
@@ -146,22 +176,34 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
                 <span className="text-sm md:text-lg">{getSquareDisplayName(square)}</span>
               </div>
             ) : (
-              /* City/Competency Card Styling */
+              /* City/Competency Card Styling - 모드별 다른 표시 */
               <>
-                {/* Top Color Bar */}
-                <div className={`h-[25%] w-full border-b-2 border-black ${getModuleColor(square.module)}`}></div>
-                
-                {/* Content */}
-                <div className="flex-1 flex flex-col items-center justify-center p-1 text-center bg-[#fafafa]">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">{square.module}</span>
-                  <span className="text-xs md:text-sm font-black text-gray-900 leading-tight break-keep">
-                    {getSquareDisplayName(square)}
-                  </span>
-                  {/* English Subtitle */}
-                  <span className="text-[8px] text-gray-400 font-bold mt-1 hidden md:block">
-                     {square.name.match(/\((.*?)\)/)?.[1]}
-                  </span>
-                </div>
+                {/* Top Header Bar - 모드별 다른 내용 */}
+                {(gameMode === GameVersion.CoreValue || gameMode === '핵심가치') ? (
+                  /* 핵심가치 모드: 검정배경에 핵심가치명, 흰배경에 카드제목 */
+                  <>
+                    <div className="h-[30%] w-full border-b-2 border-black bg-gray-900 flex items-center justify-center px-1">
+                      <span className="text-[9px] md:text-[11px] text-white font-black leading-tight break-keep text-center">
+                        {getSquareDisplayName(square)}
+                      </span>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center p-1 text-center bg-white">
+                      <span className="text-[9px] md:text-xs font-bold text-gray-800 leading-tight break-keep">
+                        {getCardTitle(square) || '상황카드'}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  /* 소통&갈등관리 / 신입직원 모드: 색상바만, 모듈명 없이 카드제목만 */
+                  <>
+                    <div className={`h-[20%] w-full border-b-2 border-black ${getModuleColor(square.module)}`}></div>
+                    <div className="flex-1 flex flex-col items-center justify-center p-1 text-center bg-[#fafafa]">
+                      <span className="text-[9px] md:text-xs font-black text-gray-900 leading-tight break-keep">
+                        {getSquareDisplayName(square)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </>
             )}
 
