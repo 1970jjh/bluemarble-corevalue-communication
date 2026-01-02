@@ -37,6 +37,8 @@ interface CardModalProps {
   onSpectatorVote?: (choice: Choice) => void;
   // 더블 찬스 (AI 점수 2배)
   isDoubleChance?: boolean;
+  // 리스크 카드 (모든 점수 마이너스)
+  isRiskCardMode?: boolean;
 }
 
 const CardModal: React.FC<CardModalProps> = ({
@@ -60,7 +62,8 @@ const CardModal: React.FC<CardModalProps> = ({
   spectatorVotes = {},
   spectatorVote,
   onSpectatorVote,
-  isDoubleChance = false
+  isDoubleChance = false,
+  isRiskCardMode = false
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -134,6 +137,11 @@ const CardModal: React.FC<CardModalProps> = ({
               {isDoubleChance && !isPreviewMode && (
                 <div className="inline-block bg-yellow-400 text-black px-2 py-1 text-xs font-black uppercase animate-bounce border-2 border-black">
                   🎲 DOUBLE CHANCE x2
+                </div>
+              )}
+              {isRiskCardMode && !isPreviewMode && (
+                <div className="inline-block bg-red-600 text-white px-2 py-1 text-xs font-black uppercase animate-pulse border-2 border-red-900">
+                  💀 RISK CARD -ALL
                 </div>
               )}
             </div>

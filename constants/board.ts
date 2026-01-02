@@ -10,19 +10,19 @@ export const BOARD_SQUARES: BoardSquare[] = [
   // Bottom Row (Right to Left) - 0~8
   { index: 0, type: SquareType.Start, name: '출발 (Start)' },
   { index: 1, type: SquareType.City, name: '인재제일', module: 'CoreValue', competency: 'people-first' },
-  { index: 2, type: SquareType.GoldenKey, name: '찬스 카드' },
+  { index: 2, type: SquareType.GoldenKey, name: '🎫 찬스 카드 1' },
   { index: 3, type: SquareType.City, name: '경청의 기술', module: 'Communication', competency: 'active-listening' },
   { index: 4, type: SquareType.City, name: '최고지향', module: 'CoreValue', competency: 'pursuit-excellence' },
   { index: 5, type: SquareType.City, name: '전달의 기술', module: 'Communication', competency: 'clear-expression' },
   { index: 6, type: SquareType.City, name: '변화선도', module: 'CoreValue', competency: 'leading-change' },
-  { index: 7, type: SquareType.GoldenKey, name: '찬스 카드' },
+  { index: 7, type: SquareType.GoldenKey, name: '💀 리스크 카드 1' },
   { index: 8, type: SquareType.Island, name: '번아웃 존' },
 
   // Left Column (Bottom to Top) - 9~15
   { index: 9, type: SquareType.City, name: '몸으로 말해요', module: 'Communication', competency: 'nonverbal-comm' },
   { index: 10, type: SquareType.City, name: '정도경영', module: 'CoreValue', competency: 'integrity-mgmt' },
   { index: 11, type: SquareType.City, name: '피드백 달인', module: 'Communication', competency: 'feedback-giving' },
-  { index: 12, type: SquareType.GoldenKey, name: '찬스 카드' },
+  { index: 12, type: SquareType.GoldenKey, name: '🎫 찬스 카드 2' },
   { index: 13, type: SquareType.City, name: '상생추구', module: 'CoreValue', competency: 'win-win' },
   { index: 14, type: SquareType.City, name: '피드백 수용', module: 'Communication', competency: 'feedback-receiving' },
   { index: 15, type: SquareType.City, name: '고객 최우선', module: 'CoreValue', competency: 'customer-first' },
@@ -31,7 +31,7 @@ export const BOARD_SQUARES: BoardSquare[] = [
   { index: 16, type: SquareType.WorldTour, name: '글로벌 기회' },
   { index: 17, type: SquareType.City, name: '갈등 레이더', module: 'Communication', competency: 'conflict-recognition' },
   { index: 18, type: SquareType.City, name: '도전적 실행', module: 'CoreValue', competency: 'challenge-execute' },
-  { index: 19, type: SquareType.GoldenKey, name: '찬스 카드' },
+  { index: 19, type: SquareType.GoldenKey, name: '💀 리스크 카드 2' },
   { index: 20, type: SquareType.City, name: '갈등 해결사', module: 'Communication', competency: 'conflict-resolution' },
   { index: 21, type: SquareType.City, name: '소통과 협력', module: 'CoreValue', competency: 'communication-collab' },
   { index: 22, type: SquareType.City, name: '협상의 달인', module: 'Communication', competency: 'negotiation' },
@@ -45,7 +45,7 @@ export const BOARD_SQUARES: BoardSquare[] = [
   { index: 28, type: SquareType.City, name: '감정 컨트롤', module: 'Communication', competency: 'emotional-intelligence' },
   { index: 29, type: SquareType.City, name: '안전 제일', module: 'CoreValue', competency: 'safety' },
   { index: 30, type: SquareType.City, name: '당당한 표현', module: 'Communication', competency: 'assertiveness' },
-  { index: 31, type: SquareType.GoldenKey, name: '찬스 카드' },
+  { index: 31, type: SquareType.GoldenKey, name: '🎫 찬스 카드 3' },
 ];
 
 // ============================================================

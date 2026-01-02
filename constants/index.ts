@@ -191,3 +191,16 @@ export const getCompetencyForSquare = (
   // 3. Communication/NewEmployee 모드는 원래 로직 유지
   return square.competency;
 };
+
+// 찬스카드 인덱스 순서 (출발선 기준)
+export const CHANCE_CARD_SQUARES = [2, 7, 12, 19, 31];
+
+// 찬스카드 타입 판별 (1/3/5번째는 복권 보너스, 2/4번째는 리스크 카드)
+export const getChanceCardType = (squareIndex: number): 'lottery' | 'risk' | null => {
+  const order = CHANCE_CARD_SQUARES.indexOf(squareIndex);
+  if (order === -1) return null;
+
+  // 1번째, 3번째, 5번째 (index 0, 2, 4) → 복권 보너스
+  // 2번째, 4번째 (index 1, 3) → 리스크 카드
+  return (order % 2 === 0) ? 'lottery' : 'risk';
+};

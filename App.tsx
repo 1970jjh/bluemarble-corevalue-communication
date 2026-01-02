@@ -10,6 +10,8 @@ import MobileTeamView from './components/MobileTeamView';
 import DiceResultOverlay from './components/DiceResultOverlay';
 import CompetencyCardPreview from './components/CompetencyCardPreview';
 import LapBonusPopup from './components/LapBonusPopup';
+import LotteryBonusPopup from './components/LotteryBonusPopup';
+import RiskCardPopup from './components/RiskCardPopup';
 import AdminDashboard from './components/AdminDashboard';
 import { soundEffects } from './lib/soundEffects';
 import {
@@ -38,7 +40,9 @@ import {
   NEW_EMPLOYEE_CARDS,
   EVENT_CARDS,
   getCompetencyCardsByMode,
-  getCompetencyForSquare
+  getCompetencyForSquare,
+  getChanceCardType,
+  CHANCE_CARD_SQUARES
 } from './constants';
 import { Smartphone, Monitor, QrCode, X, Copy, Check, Settings } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -88,6 +92,11 @@ const App: React.FC = () => {
   const [showLapBonus, setShowLapBonus] = useState(false);  // 한 바퀴 완주 보너스 팝업
   const [lapBonusInfo, setLapBonusInfo] = useState<{ teamName: string; lapCount: number } | null>(null);  // 보너스 받을 팀 정보
   const [isDoubleChance, setIsDoubleChance] = useState(false);  // 더블 찬스 (AI 점수 2배)
+  const [showLotteryBonus, setShowLotteryBonus] = useState(false);  // 복권 보너스 팝업
+  const [lotteryBonusInfo, setLotteryBonusInfo] = useState<{ teamName: string; chanceCardNumber: number } | null>(null);
+  const [showRiskCard, setShowRiskCard] = useState(false);  // 리스크 카드 팝업
+  const [riskCardInfo, setRiskCardInfo] = useState<{ teamName: string; chanceCardNumber: number } | null>(null);
+  const [isRiskCardMode, setIsRiskCardMode] = useState(false);  // 리스크 카드 상황 (모든 점수 마이너스)
 
   // --- Active Card & Decision State (Shared between Admin & Mobile) ---
   const [activeCard, setActiveCard] = useState<GameCard | null>(null);
@@ -1060,6 +1069,23 @@ const App: React.FC = () => {
       console.log(`[Card Selection] Square: ${square.index}, Mode: ${sessionCardType}, Target: ${targetCompetency}, Found: ${exactCard?.title || 'fallback'}`);
     }
     else if (square.type === SquareType.GoldenKey) {
+      // 찬스카드 타입 확인 (1/3/5 → lottery, 2/4 → risk)
+      const chanceCardType = getChanceCardType(square.index);
+      const chanceCardOrder = CHANCE_CARD_SQUARES.indexOf(square.index) + 1; // 1-based
+
+      if (chanceCardType === 'lottery') {
+        // 복권 보너스 팝업 표시
+        setLotteryBonusInfo({ teamName: team.name, chanceCardNumber: chanceCardOrder });
+        setShowLotteryBonus(true);
+        addLog(`🎫 [${team.name}] ${chanceCardOrder}번째 찬스카드 - 복권 보너스 획득!`);
+      } else if (chanceCardType === 'risk') {
+        // 리스크 카드 모드 설정 (AI 평가 시 모든 점수 마이너스)
+        setRiskCardInfo({ teamName: team.name, chanceCardNumber: chanceCardOrder });
+        setShowRiskCard(true);
+        setIsRiskCardMode(true);
+        addLog(`⚠️ [${team.name}] ${chanceCardOrder}번째 찬스카드 - 리스크 카드!`);
+      }
+
       // 우연한 기회 - Event 카드 중 랜덤
       const eventCards = EVENT_CARDS.filter(c => c.type === 'Event');
       selectedCard = eventCards.length > 0
@@ -1727,9 +1753,16 @@ const App: React.FC = () => {
 
     const baseScoreChanges = aiEvaluationResult.scoreChanges;
 
+    // 리스크 카드: 모든 점수를 음수로 변환 (절대값 유지)
+    const applyRiskCard = (score?: number) => {
+      if (score === undefined) return undefined;
+      // 양수이면 음수로 변환, 음수이면 그대로 유지
+      return score > 0 ? -score : score;
+    };
+
     // 더블 찬스: 모든 점수 2배 적용 (양수든 음수든)
     const multiplier = isDoubleChance ? 2 : 1;
-    const scoreChanges = {
+    let scoreChanges = {
       capital: baseScoreChanges.capital !== undefined ? baseScoreChanges.capital * multiplier : undefined,
       energy: baseScoreChanges.energy !== undefined ? baseScoreChanges.energy * multiplier : undefined,
       reputation: baseScoreChanges.reputation !== undefined ? baseScoreChanges.reputation * multiplier : undefined,
@@ -1737,6 +1770,19 @@ const App: React.FC = () => {
       competency: baseScoreChanges.competency !== undefined ? baseScoreChanges.competency * multiplier : undefined,
       insight: baseScoreChanges.insight !== undefined ? baseScoreChanges.insight * multiplier : undefined,
     };
+
+    // 리스크 카드: 모든 점수를 음수로 강제 변환
+    if (isRiskCardMode) {
+      scoreChanges = {
+        capital: applyRiskCard(scoreChanges.capital),
+        energy: applyRiskCard(scoreChanges.energy),
+        reputation: applyRiskCard(scoreChanges.reputation),
+        trust: applyRiskCard(scoreChanges.trust),
+        competency: applyRiskCard(scoreChanges.competency),
+        insight: applyRiskCard(scoreChanges.insight),
+      };
+      addLog(`💀 리스크 카드 적용! 모든 점수가 마이너스로 변환됨`);
+    }
 
     if (isDoubleChance) {
       addLog(`🎲 더블 찬스 적용! 모든 점수 x2 (기존 점수의 2배)`);
@@ -1786,6 +1832,7 @@ const App: React.FC = () => {
     setSpectatorVotes({});  // 관람자 투표 초기화
     setMySpectatorVote(null);  // 내 투표 초기화
     setIsDoubleChance(false);  // 더블 찬스 초기화
+    setIsRiskCardMode(false);  // 리스크 카드 모드 초기화
     setGamePhase(GamePhase.Idle);
     setTurnTimeLeft(120);
 
@@ -2279,6 +2326,7 @@ const App: React.FC = () => {
             spectatorVote={mySpectatorVote}
             onSpectatorVote={(choice) => handleSpectatorVote(choice, participantTeam.name)}
             isDoubleChance={isDoubleChance}
+            isRiskCardMode={isRiskCardMode}
           />
         )}
 
@@ -2442,6 +2490,7 @@ const App: React.FC = () => {
           onAISubmit={handleAdminAISubmit}
           spectatorVotes={spectatorVotes}
           isDoubleChance={isDoubleChance}
+          isRiskCardMode={isRiskCardMode}
         />
       )}
 
@@ -2556,6 +2605,41 @@ const App: React.FC = () => {
         }}
         onComplete={handleLapBonusComplete}
         duration={5000}
+      />
+
+      {/* 복권 보너스 팝업 (1/3/5번째 찬스카드) */}
+      <LotteryBonusPopup
+        visible={showLotteryBonus}
+        teamName={lotteryBonusInfo?.teamName || ''}
+        chanceCardNumber={lotteryBonusInfo?.chanceCardNumber || 1}
+        onComplete={() => {
+          setShowLotteryBonus(false);
+          setLotteryBonusInfo(null);
+        }}
+        duration={5000}
+      />
+
+      {/* 리스크 카드 팝업 (2/4번째 찬스카드) */}
+      <RiskCardPopup
+        visible={showRiskCard}
+        teamName={riskCardInfo?.teamName || ''}
+        chanceCardNumber={riskCardInfo?.chanceCardNumber || 2}
+        teams={teams}
+        currentTeamId={currentTeam?.id || ''}
+        onSelectTeam={(targetTeamId) => {
+          const targetTeam = teams.find(t => t.id === targetTeamId);
+          if (targetTeam) {
+            addLog(`🎫 [${riskCardInfo?.teamName}] 복권을 [${targetTeam.name}]에게 양도!`);
+          }
+          setShowRiskCard(false);
+          setRiskCardInfo(null);
+        }}
+        onSkip={() => {
+          addLog(`⏭️ [${riskCardInfo?.teamName}] 복권 양도 건너뜀`);
+          setShowRiskCard(false);
+          setRiskCardInfo(null);
+        }}
+        duration={15000}
       />
 
       {/* 관리자 대시보드 */}
