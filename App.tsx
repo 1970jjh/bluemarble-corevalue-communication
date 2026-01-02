@@ -37,7 +37,8 @@ import {
   COMMUNICATION_CARDS,
   NEW_EMPLOYEE_CARDS,
   EVENT_CARDS,
-  getCompetencyCardsByMode
+  getCompetencyCardsByMode,
+  getCompetencyForSquare
 } from './constants';
 import { Smartphone, Monitor, QrCode, X, Copy, Check, Settings } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -86,6 +87,7 @@ const App: React.FC = () => {
   const [pendingSquare, setPendingSquare] = useState<any>(null);  // 도착 예정 칸
   const [showLapBonus, setShowLapBonus] = useState(false);  // 한 바퀴 완주 보너스 팝업
   const [lapBonusInfo, setLapBonusInfo] = useState<{ teamName: string; lapCount: number } | null>(null);  // 보너스 받을 팀 정보
+  const [isDoubleChance, setIsDoubleChance] = useState(false);  // 더블 찬스 (AI 점수 2배)
 
   // --- Active Card & Decision State (Shared between Admin & Mobile) ---
   const [activeCard, setActiveCard] = useState<GameCard | null>(null);
@@ -310,7 +312,8 @@ const App: React.FC = () => {
         setIsRolling(state.phase === GamePhase.Rolling);
 
         // 주사위 롤링 상태 동기화 (모바일에서 굴렸을 때 관리자 대시보드에서도 표시)
-        if (state.phase === GamePhase.Rolling && !localOperationInProgress.current) {
+        // 단, 이미 오버레이가 표시 중이면 pendingDice 업데이트 안함 (버그 방지)
+        if (state.phase === GamePhase.Rolling && !localOperationInProgress.current && !showDiceOverlay) {
           // 다른 클라이언트에서 주사위를 굴린 경우 - 주사위 오버레이 표시
           setPendingDice(state.diceValue || [1, 1]);
           setShowDiceOverlay(true);
@@ -1050,9 +1053,11 @@ const App: React.FC = () => {
     let selectedCard: GameCard | null = null;
 
     if (square.type === SquareType.City) {
-      // 역량(competency)에 맞는 카드 선택
-      const exactCard = allCards.find(c => c.competency === square.competency);
+      // 역량(competency)에 맞는 카드 선택 - 모드별 매핑 사용
+      const targetCompetency = getCompetencyForSquare(square.index, sessionCardType);
+      const exactCard = allCards.find(c => c.competency === targetCompetency);
       selectedCard = exactCard || modeCards[0];
+      console.log(`[Card Selection] Square: ${square.index}, Mode: ${sessionCardType}, Target: ${targetCompetency}, Found: ${exactCard?.title || 'fallback'}`);
     }
     else if (square.type === SquareType.GoldenKey) {
       // 우연한 기회 - Event 카드 중 랜덤
@@ -1819,54 +1824,13 @@ const App: React.FC = () => {
       return eventCandidates.length > 0 ? eventCandidates[Math.floor(Math.random() * eventCandidates.length)] : undefined;
     };
 
-    // 현재 모드의 보드 칸에 배정되지 않은 역량 카드 찾기 (반대 모드 칸 클릭 시 사용)
-    const getUnmappedCompetencyCards = () => {
-      // 현재 모드에서 보드에 배정된 역량 ID 목록
-      const boardCompetencies = BOARD_SQUARES
-        .filter(sq => sq.competency && sq.module === sessionCardType)
-        .map(sq => sq.competency);
-
-      // 배정되지 않은 역량 카드들
-      const unmappedCards = modeCards.filter(c =>
-        c.competency && !boardCompetencies.includes(c.competency)
-      );
-
-      // 커스텀 카드에서도 확인
-      if (sessionCards.length > 0) {
-        const unmappedCustomCards = sessionCards.filter(c =>
-          (c.type === sessionCardType || c.type === 'CoreValue' || c.type === 'Communication' || c.type === 'NewEmployee') &&
-          c.competency && !boardCompetencies.includes(c.competency)
-        );
-        return unmappedCustomCards.length > 0 ? unmappedCustomCards : unmappedCards;
-      }
-
-      return unmappedCards;
-    };
-
     switch (square.type) {
       case SquareType.City:
-        // 역량(competency)에 맞는 카드 선택
-        cardToPreview = allCards.find(c => c.competency === square.competency);
+        // 역량(competency)에 맞는 카드 선택 - 모드별 매핑 사용
+        const targetPreviewCompetency = getCompetencyForSquare(index, sessionCardType);
+        cardToPreview = allCards.find(c => c.competency === targetPreviewCompetency);
         if (!cardToPreview) {
-          cardToPreview = modeCards.find(c => c.competency === square.competency);
-        }
-
-        // 반대 모드 칸 클릭 시 (해당 역량 카드가 없는 경우), 배정되지 않은 역량 카드 중 하나 표시
-        if (!cardToPreview && square.module !== sessionCardType) {
-          const unmappedCards = getUnmappedCompetencyCards();
-          if (unmappedCards.length > 0) {
-            // 보드 인덱스 기반으로 일관된 카드 선택 (같은 칸은 항상 같은 카드)
-            const oppositeSquares = BOARD_SQUARES
-              .filter(sq => sq.type === SquareType.City && sq.module !== sessionCardType)
-              .sort((a, b) => a.index - b.index);
-            const squareOrder = oppositeSquares.findIndex(sq => sq.index === index);
-            if (squareOrder >= 0 && squareOrder < unmappedCards.length) {
-              cardToPreview = unmappedCards[squareOrder];
-            } else {
-              // fallback: 랜덤 선택
-              cardToPreview = unmappedCards[Math.floor(Math.random() * unmappedCards.length)];
-            }
-          }
+          cardToPreview = modeCards.find(c => c.competency === targetPreviewCompetency);
         }
         break;
       case SquareType.GoldenKey:

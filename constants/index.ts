@@ -1,4 +1,4 @@
-import { BoardSquare, GameCard, CompetencyType, ResourceState } from '../types';
+import { BoardSquare, GameCard, CompetencyType, ResourceState, SquareType } from '../types';
 
 // ============================================================
 // 모든 constants 모듈 re-export
@@ -11,7 +11,7 @@ export { NEW_EMPLOYEE_CARDS } from './newEmployeeCards';
 export { EVENT_CARDS } from './eventCards';
 
 // 개별 import (내부 사용)
-import { BOARD_SQUARES, NEW_EMPLOYEE_BOARD_NAMES } from './board';
+import { BOARD_SQUARES, NEW_EMPLOYEE_BOARD_NAMES, CORE_VALUE_BOARD_NAMES } from './board';
 import { CORE_VALUE_CARDS } from './coreValueCards';
 import { COMMUNICATION_CARDS } from './communicationCards';
 import { NEW_EMPLOYEE_CARDS } from './newEmployeeCards';
@@ -137,4 +137,57 @@ export const getCompetencyCardsByMode = (mode: 'CoreValue' | 'Communication' | '
     default:
       return CORE_VALUE_CARDS;
   }
+};
+
+// 한글 보드 이름에서 competency ID로 매핑 (핵심가치 모드용)
+export const KOREAN_TO_COMPETENCY_MAP: Record<string, string> = {
+  // 핵심가치 11개 (원래 CoreValue 모드 칸)
+  '인재제일': 'people-first',
+  '최고지향': 'pursuit-excellence',
+  '변화선도': 'leading-change',
+  '정도경영': 'integrity-mgmt',
+  '상생추구': 'win-win',
+  '고객 최우선': 'customer-first',
+  '도전적 실행': 'challenge-execute',
+  '소통과 협력': 'communication-collab',
+  '인재 존중': 'respect-talent',
+  '글로벌 지향': 'global-orientation',
+  '안전': 'safety',
+  // 나머지 핵심가치 11개 (Communication 칸에 배정된 것들)
+  '윤리': 'ethics',
+  '창의': 'creativity',
+  '도전': 'challenge',
+  '헌신': 'dedication',
+  '열정': 'passion',
+  '정직': 'honesty',
+  '전문성': 'professionalism',
+  '책임': 'responsibility',
+  '혁신': 'innovation',
+  '신뢰': 'trust',
+  '사회적 책임': 'social-responsibility',
+};
+
+// 보드 칸의 모드별 competency 가져오기
+export const getCompetencyForSquare = (
+  squareIndex: number,
+  gameMode: 'CoreValue' | 'Communication' | 'NewEmployee'
+): string | undefined => {
+  const square = BOARD_SQUARES.find(s => s.index === squareIndex);
+  if (!square || square.type !== SquareType.City) return undefined;
+
+  // 1. 해당 모드와 칸의 모듈이 일치하면 원래 competency 사용
+  if (square.module === gameMode) {
+    return square.competency;
+  }
+
+  // 2. CoreValue 모드에서 다른 모듈의 칸에 도착한 경우
+  if (gameMode === 'CoreValue') {
+    const koreanName = CORE_VALUE_BOARD_NAMES[squareIndex];
+    if (koreanName) {
+      return KOREAN_TO_COMPETENCY_MAP[koreanName] || square.competency;
+    }
+  }
+
+  // 3. Communication/NewEmployee 모드는 원래 로직 유지
+  return square.competency;
 };
