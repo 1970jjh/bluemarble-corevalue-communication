@@ -22,7 +22,9 @@ import {
   ChevronUp,
   RefreshCw,
   Check,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -33,6 +35,12 @@ interface AdminDashboardProps {
   onSaveCards: (cards: GameCard[]) => void;
 }
 
+// 확장된 카드 타입 (역량명 포함)
+interface ExtendedGameCard extends GameCard {
+  competencyNameKo?: string;
+  competencyNameEn?: string;
+}
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   isOpen,
   onClose,
@@ -41,27 +49,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveCards
 }) => {
   // 현재 모드에 맞는 기본 카드 가져오기
-  const getDefaultCards = () => {
-    if (gameMode === GameVersion.CoreValue) {
-      return [...CORE_VALUE_CARDS, ...EVENT_CARDS];
-    } else {
-      return [...COMMUNICATION_CARDS, ...EVENT_CARDS];
-    }
+  const getDefaultCards = (): ExtendedGameCard[] => {
+    const baseCards = gameMode === GameVersion.CoreValue
+      ? [...CORE_VALUE_CARDS, ...EVENT_CARDS]
+      : [...COMMUNICATION_CARDS, ...EVENT_CARDS];
+
+    // 역량 정보 추가
+    return baseCards.map(card => {
+      const competencyInfo = card.competency ? COMPETENCY_INFO.find(c => c.id === card.competency) : null;
+      return {
+        ...card,
+        competencyNameKo: competencyInfo?.nameKo || '',
+        competencyNameEn: competencyInfo?.nameEn || ''
+      };
+    });
   };
 
   // 상태 관리
-  const [cards, setCards] = useState<GameCard[]>([]);
-  const [editingCard, setEditingCard] = useState<GameCard | null>(null);
+  const [cards, setCards] = useState<ExtendedGameCard[]>([]);
+  const [editingCard, setEditingCard] = useState<ExtendedGameCard | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'competency' | 'event'>('all');
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [hasChanges, setHasChanges] = useState(false);
 
+  // AI 생성 관련 상태
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiInputName, setAiInputName] = useState('');
+  const [showAiInput, setShowAiInput] = useState(false);
+
   // 초기화: 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
   useEffect(() => {
     if (customCards && customCards.length > 0) {
-      setCards(customCards);
+      // 커스텀 카드에 역량명 정보 추가
+      const extendedCustomCards = customCards.map(card => {
+        const competencyInfo = card.competency ? COMPETENCY_INFO.find(c => c.id === card.competency) : null;
+        return {
+          ...card,
+          competencyNameKo: (card as ExtendedGameCard).competencyNameKo || competencyInfo?.nameKo || '',
+          competencyNameEn: (card as ExtendedGameCard).competencyNameEn || competencyInfo?.nameEn || ''
+        };
+      });
+      setCards(extendedCustomCards);
     } else {
       setCards(getDefaultCards());
     }
@@ -72,7 +102,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const matchesSearch =
       card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       card.situation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (card.competency && card.competency.toLowerCase().includes(searchTerm.toLowerCase()));
+      (card.competency && card.competency.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (card.competencyNameKo && card.competencyNameKo.includes(searchTerm));
 
     const matchesFilter =
       filterType === 'all' ||
@@ -83,8 +114,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   // 카드 편집 시작
-  const handleEditCard = (card: GameCard) => {
+  const handleEditCard = (card: ExtendedGameCard) => {
     setEditingCard({ ...card });
+    setShowAiInput(false);
+    setAiInputName(card.competencyNameKo || '');
   };
 
   // 카드 편집 저장
@@ -103,7 +136,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleSaveAll = async () => {
     setSaveStatus('saving');
     try {
-      await onSaveCards(cards);
+      await onSaveCards(cards as GameCard[]);
       setSaveStatus('saved');
       setHasChanges(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -119,6 +152,119 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setCards(getDefaultCards());
       setHasChanges(true);
     }
+  };
+
+  // AI로 카드 내용 생성
+  const handleAIGenerate = async () => {
+    if (!editingCard || !aiInputName.trim()) {
+      alert('역량카드명을 입력해주세요.');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.API_KEY || '';
+
+      if (!apiKey) {
+        // API 키가 없으면 샘플 데이터로 대체
+        const sampleContent = generateSampleContent(aiInputName);
+        setEditingCard({
+          ...editingCard,
+          competencyNameKo: aiInputName,
+          competencyNameEn: sampleContent.nameEn,
+          title: sampleContent.title,
+          situation: sampleContent.situation,
+          choices: sampleContent.choices,
+          learningPoint: sampleContent.learningPoint
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      const prompt = `당신은 기업 교육 콘텐츠 전문가입니다.
+다음 역량에 대한 교육용 시나리오 카드를 만들어주세요.
+
+역량명: ${aiInputName}
+게임 모드: ${gameMode === GameVersion.CoreValue ? '핵심가치' : '소통&갈등관리'}
+
+다음 JSON 형식으로 응답해주세요:
+{
+  "nameEn": "영문 역량명",
+  "title": "시나리오 제목 (5-10자)",
+  "situation": "직장에서 일어날 수 있는 구체적인 상황 설명 (150-200자). 딜레마나 선택이 필요한 상황으로 작성",
+  "choices": [
+    { "id": "A", "text": "선택지 A 설명 (30-50자)" },
+    { "id": "B", "text": "선택지 B 설명 (30-50자)" },
+    { "id": "C", "text": "선택지 C 설명 (30-50자)" }
+  ],
+  "learningPoint": "이 시나리오에서 배울 수 있는 핵심 교훈 (30-50자)"
+}
+
+JSON만 응답하세요.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 1024,
+          }
+        })
+      });
+
+      const data = await response.json();
+      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      // JSON 파싱
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        setEditingCard({
+          ...editingCard,
+          competencyNameKo: aiInputName,
+          competencyNameEn: parsed.nameEn || '',
+          title: parsed.title || '',
+          situation: parsed.situation || '',
+          choices: parsed.choices || editingCard.choices,
+          learningPoint: parsed.learningPoint || ''
+        });
+      }
+    } catch (error) {
+      console.error('AI 생성 오류:', error);
+      // 오류 시 샘플 데이터 사용
+      const sampleContent = generateSampleContent(aiInputName);
+      setEditingCard({
+        ...editingCard,
+        competencyNameKo: aiInputName,
+        competencyNameEn: sampleContent.nameEn,
+        title: sampleContent.title,
+        situation: sampleContent.situation,
+        choices: sampleContent.choices,
+        learningPoint: sampleContent.learningPoint
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 샘플 콘텐츠 생성 (API 없을 때 fallback)
+  const generateSampleContent = (competencyName: string) => {
+    return {
+      nameEn: competencyName,
+      title: `${competencyName}의 순간`,
+      situation: `팀 프로젝트를 진행하는 중, ${competencyName}과 관련된 중요한 상황이 발생했습니다. 동료와의 의견 차이가 생겼고, 어떻게 대응할지 선택해야 합니다. 시간은 촉박하고, 결정에 따라 프로젝트 결과가 달라질 수 있습니다.`,
+      choices: [
+        { id: 'A', text: '기존 방식대로 진행한다. 안정성이 중요하다.' },
+        { id: 'B', text: '동료와 충분히 대화하고, 함께 최선의 방법을 찾는다.' },
+        { id: 'C', text: '상위 결정권자에게 판단을 맡긴다.' }
+      ],
+      learningPoint: `${competencyName}은 팀워크와 성과 모두에 영향을 미치는 핵심 역량이다`
+    };
   };
 
   // 역량 정보 가져오기
@@ -231,7 +377,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           <div className="space-y-3">
             {filteredCards.map((card) => {
-              const competencyInfo = card.competency ? getCompetencyInfo(card.competency) : null;
               const isExpanded = expandedCardId === card.id;
 
               return (
@@ -256,8 +401,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div>
                         <div className="font-semibold text-gray-800">{card.title}</div>
                         <div className="text-sm text-gray-500">
-                          {competencyInfo ? (
-                            <span>{competencyInfo.nameKo} ({competencyInfo.nameEn})</span>
+                          {card.competencyNameKo ? (
+                            <span>{card.competencyNameKo} ({card.competencyNameEn})</span>
+                          ) : card.competency ? (
+                            <span>{getCompetencyInfo(card.competency)?.nameKo} ({getCompetencyInfo(card.competency)?.nameEn})</span>
                           ) : (
                             <span className="italic">{card.type} 카드</span>
                           )}
@@ -329,7 +476,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {editingCard && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4">
             <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
+              <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
                 <h3 className="text-xl font-bold text-gray-800">카드 편집</h3>
                 <button
                   onClick={() => setEditingCard(null)}
@@ -340,6 +487,80 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               <div className="p-6 space-y-6">
+                {/* AI 생성 섹션 */}
+                {editingCard.competency && (
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-5 h-5 text-purple-600" />
+                      <span className="font-semibold text-purple-800">AI 자동 생성</span>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={aiInputName}
+                        onChange={(e) => setAiInputName(e.target.value)}
+                        placeholder="역량카드명 입력 (예: 적극적 경청)"
+                        className="flex-1 px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white"
+                      />
+                      <button
+                        onClick={handleAIGenerate}
+                        disabled={isGenerating || !aiInputName.trim()}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg transition-all font-medium ${
+                          isGenerating || !aiInputName.trim()
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg'
+                        }`}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            생성 중...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="w-4 h-4" />
+                            AI 생성
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-purple-600 mt-2">
+                      역량카드명을 입력하면 AI가 제목, 상황, 선택지, 학습포인트를 자동 생성합니다.
+                    </p>
+                  </div>
+                )}
+
+                {/* 역량카드명 (역량 카드인 경우에만) */}
+                {editingCard.competency && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        역량카드명 (한글) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editingCard.competencyNameKo || ''}
+                        onChange={(e) => setEditingCard({ ...editingCard, competencyNameKo: e.target.value })}
+                        placeholder="예: 적극적 경청"
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        역량카드명 (영문)
+                      </label>
+                      <input
+                        type="text"
+                        value={editingCard.competencyNameEn || ''}
+                        onChange={(e) => setEditingCard({ ...editingCard, competencyNameEn: e.target.value })}
+                        placeholder="예: Active Listening"
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* 제목 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">제목</label>
@@ -369,7 +590,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="space-y-3">
                       {editingCard.choices.map((choice, idx) => (
                         <div key={choice.id} className="flex items-start gap-2">
-                          <span className="font-bold text-indigo-600 mt-2">{choice.id}.</span>
+                          <span className="font-bold text-indigo-600 mt-2 w-6">{choice.id}.</span>
                           <textarea
                             value={choice.text}
                             onChange={(e) => {
