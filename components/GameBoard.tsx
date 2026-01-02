@@ -1,5 +1,5 @@
 import React from 'react';
-import { BOARD_SQUARES, BOARD_SIZE } from '../constants';
+import { BOARD_SQUARES, BOARD_SIZE, NEW_EMPLOYEE_BOARD_NAMES } from '../constants';
 import { BoardSquare, SquareType, Team, TeamColor, GameVersion } from '../types';
 
 interface GameBoardProps {
@@ -9,6 +9,14 @@ interface GameBoardProps {
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode }) => {
+  // 신입직원 모드일 때 별도 이름 사용
+  const getSquareDisplayName = (square: BoardSquare): string => {
+    if (gameMode === GameVersion.NewEmployee || gameMode === '신입직원 직장생활') {
+      return NEW_EMPLOYEE_BOARD_NAMES[square.index] || square.name.split('(')[0];
+    }
+    return square.name.split('(')[0];
+  };
+
   const getGridStyle = (index: number) => {
     let row = 0;
     let col = 0;
@@ -105,7 +113,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
                 }
               `}>
                 <span className="text-xs md:text-sm uppercase tracking-tighter mb-1">{square.type === SquareType.Start ? 'START' : square.type}</span>
-                <span className="text-sm md:text-lg">{square.name.split('(')[0]}</span>
+                <span className="text-sm md:text-lg">{getSquareDisplayName(square)}</span>
               </div>
             ) : (
               /* City/Competency Card Styling */
@@ -117,7 +125,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
                 <div className="flex-1 flex flex-col items-center justify-center p-1 text-center bg-[#fafafa]">
                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">{square.module}</span>
                   <span className="text-xs md:text-sm font-black text-gray-900 leading-tight break-keep">
-                    {square.name.split('(')[0]}
+                    {getSquareDisplayName(square)}
                   </span>
                   {/* English Subtitle */}
                   <span className="text-[8px] text-gray-400 font-bold mt-1 hidden md:block">
