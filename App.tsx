@@ -13,6 +13,7 @@ import LapBonusPopup from './components/LapBonusPopup';
 import LotteryBonusPopup from './components/LotteryBonusPopup';
 import RiskCardPopup from './components/RiskCardPopup';
 import AdminDashboard from './components/AdminDashboard';
+import GameRulesModal from './components/GameRulesModal';
 import { soundEffects } from './lib/soundEffects';
 import {
   Team,
@@ -44,7 +45,7 @@ import {
   getChanceCardType,
   CHANCE_CARD_SQUARES
 } from './constants';
-import { Smartphone, Monitor, QrCode, X, Copy, Check, Settings } from 'lucide-react';
+import { Smartphone, Monitor, QrCode, X, Copy, Check, Settings, BookOpen } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -128,6 +129,9 @@ const App: React.FC = () => {
 
   // 관리자 대시보드 상태
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+
+  // 게임 규칙서 모달 상태
+  const [showGameRules, setShowGameRules] = useState(false);
 
   // Ref to track local operations in progress (to prevent Firebase from overriding local state)
   const localOperationInProgress = useRef(false);
@@ -2304,6 +2308,15 @@ const App: React.FC = () => {
           spectatorVote={mySpectatorVote}
           onSpectatorVote={(choice) => handleSpectatorVote(choice, participantTeam.name)}
           spectatorVotes={spectatorVotes}
+          teamNumber={(participantSession?.teams.findIndex(t => t.id === participantTeamId) ?? 0) + 1}
+          onShowRules={() => setShowGameRules(true)}
+        />
+
+        {/* 게임 규칙서 모달 (참가자 화면용) */}
+        <GameRulesModal
+          visible={showGameRules}
+          onClose={() => setShowGameRules(false)}
+          gameMode={participantSession?.version || GameVersion.CoreValue}
         />
 
         {/* 다른 팀 턴 뷰어 모드: 현재 진행 중인 카드가 있고 내 턴이 아니면 읽기 전용 모달 표시 */}
@@ -2382,6 +2395,13 @@ const App: React.FC = () => {
               title="카드 관리"
             >
               <Settings size={18} /> 카드관리
+            </button>
+            <button
+              onClick={() => setShowGameRules(true)}
+              className="px-4 py-2 border-2 border-black font-bold flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600"
+              title="게임 규칙서"
+            >
+              <BookOpen size={18} /> 규칙서
             </button>
             <div className="flex border-2 border-black bg-gray-100 overflow-x-auto max-w-[200px] md:max-w-none">
                {teams.map((t) => (
@@ -2462,6 +2482,8 @@ const App: React.FC = () => {
                  isSaving={isSaving}
                  isGameStarted={isGameStarted}
                  spectatorVotes={spectatorVotes}
+                 teamNumber={(teams.findIndex(t => t.id === monitoredTeam.id) ?? 0) + 1}
+                 onShowRules={() => setShowGameRules(true)}
                />
              </div>
            )}
@@ -2651,6 +2673,13 @@ const App: React.FC = () => {
         onSaveCards={(cards) => {
           updateCustomCardsInSession(cards);
         }}
+      />
+
+      {/* 게임 규칙서 모달 (관리자 화면용) */}
+      <GameRulesModal
+        visible={showGameRules}
+        onClose={() => setShowGameRules(false)}
+        gameMode={currentSession?.version || GameVersion.CoreValue}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Team, GamePhase, GameCard, Choice } from '../types';
-import { Battery, Coins, Handshake, Lightbulb, TrendingUp, MapPin, Dice5, Save, CheckCircle, Eye, MessageSquare, LogOut } from 'lucide-react';
-import { BOARD_SQUARES } from '../constants';
+import { Battery, Coins, Handshake, Lightbulb, TrendingUp, MapPin, Dice5, Save, CheckCircle, Eye, MessageSquare, LogOut, BookOpen } from 'lucide-react';
+import { BOARD_SQUARES, getCharacterImage } from '../constants';
 
 interface MobileTeamViewProps {
   team: Team;
@@ -24,6 +24,10 @@ interface MobileTeamViewProps {
   spectatorVote?: Choice | null;  // 관람자의 현재 선택
   onSpectatorVote?: (choice: Choice) => void;  // 관람자 투표 핸들러
   spectatorVotes?: { [optionId: string]: string[] };  // 다른 팀들의 투표 현황
+
+  // 규칙서 보기
+  teamNumber?: number;  // 팀 번호 (캐릭터 이미지용)
+  onShowRules?: () => void;  // 규칙서 보기 핸들러
 }
 
 const MobileTeamView: React.FC<MobileTeamViewProps> = ({
@@ -42,7 +46,9 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
   isGameStarted = true,
   spectatorVote,
   onSpectatorVote,
-  spectatorVotes = {}
+  spectatorVotes = {},
+  teamNumber = 1,
+  onShowRules
 }) => {
   const currentSquare = BOARD_SQUARES.find(s => s.index === team.position);
   const isOpenEnded = activeCard && (!activeCard.choices || activeCard.choices.length === 0);
@@ -80,7 +86,22 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
             <h1 className="text-2xl font-black uppercase">{team.name}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full border-2 border-black bg-${team.color.toLowerCase()}-500`}></div>
+            {/* 규칙서 보기 버튼 */}
+            {onShowRules && (
+              <button
+                onClick={onShowRules}
+                className="p-2 bg-blue-100 border-2 border-black hover:bg-blue-200 transition-colors"
+                title="게임 규칙서"
+              >
+                <BookOpen size={16} />
+              </button>
+            )}
+            {/* 팀 캐릭터 이미지 */}
+            <img
+              src={getCharacterImage(teamNumber)}
+              alt={`Team ${teamNumber}`}
+              className="w-10 h-10 object-contain border-2 border-black rounded-lg bg-white p-0.5"
+            />
             {onLogout && (
               <button
                 onClick={() => {

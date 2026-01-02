@@ -204,3 +204,21 @@ export const getChanceCardType = (squareIndex: number): 'lottery' | 'risk' | nul
   // 2번째, 4번째 (index 1, 3) → 리스크 카드
   return (order % 2 === 0) ? 'lottery' : 'risk';
 };
+
+// 팀별 캐릭터 이미지 (8개)
+export const CHARACTER_IMAGES = [
+  'https://i.ibb.co/RGcCcwBf/1.png',  // 1조
+  'https://i.ibb.co/MkKQpP8W/2.png',  // 2조
+  'https://i.ibb.co/KpF32MRT/3.png',  // 3조
+  'https://i.ibb.co/5XvVbLmQ/4.png',  // 4조
+  'https://i.ibb.co/Y43M160r/5.png',  // 5조
+  'https://i.ibb.co/hRZ7RJZ4/6.png',  // 6조
+  'https://i.ibb.co/BH7hrmDZ/7.png',  // 7조
+  'https://i.ibb.co/kgqKfW7Q/8.png',  // 8조
+];
+
+// 팀 번호로 캐릭터 이미지 가져오기
+export const getCharacterImage = (teamNumber: number): string => {
+  const index = (teamNumber - 1) % CHARACTER_IMAGES.length;
+  return CHARACTER_IMAGES[index];
+};
