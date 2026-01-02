@@ -9,6 +9,7 @@ import Lobby from './components/Lobby';
 import MobileTeamView from './components/MobileTeamView';
 import DiceResultOverlay from './components/DiceResultOverlay';
 import CompetencyCardPreview from './components/CompetencyCardPreview';
+import LapBonusPopup from './components/LapBonusPopup';
 import AdminDashboard from './components/AdminDashboard';
 import { soundEffects } from './lib/soundEffects';
 import {
@@ -83,6 +84,8 @@ const App: React.FC = () => {
   const [pendingDice, setPendingDice] = useState<[number, number]>([1, 1]);  // 대기 중인 주사위 결과
   const [showCompetencyPreview, setShowCompetencyPreview] = useState(false);  // 역량카드 미리보기
   const [pendingSquare, setPendingSquare] = useState<any>(null);  // 도착 예정 칸
+  const [showLapBonus, setShowLapBonus] = useState(false);  // 한 바퀴 완주 보너스 팝업
+  const [lapBonusInfo, setLapBonusInfo] = useState<{ teamName: string; lapCount: number } | null>(null);  // 보너스 받을 팀 정보
 
   // --- Active Card & Decision State (Shared between Admin & Mobile) ---
   const [activeCard, setActiveCard] = useState<GameCard | null>(null);
@@ -1249,18 +1252,23 @@ const App: React.FC = () => {
   const moveTeamLogic = (teamToMove: Team, steps: number) => {
     setGamePhase(GamePhase.Moving);
     const startPos = teamToMove.position;
-    let passedStart = false;
     let finalPos = startPos + steps;
+    let passedStart = false;
 
     if (finalPos >= BOARD_SIZE) {
       finalPos = finalPos % BOARD_SIZE;
       passedStart = true;
     }
 
-    // 한 칸씩 이동 애니메이션
+    // 스타트 지점을 통과하는 스텝 번호 계산 (0-indexed)
+    const stepsToStart = passedStart ? (BOARD_SIZE - startPos) : -1;
+
+    // 한 칸씩 이동 애니메이션 (재귀적으로 처리하여 중간에 일시정지 가능)
     let currentStep = 0;
-    const moveInterval = setInterval(() => {
+
+    const moveOneStep = () => {
       currentStep++;
+      const previousPos = (startPos + currentStep - 1) % BOARD_SIZE;
       const intermediatePos = (startPos + currentStep) % BOARD_SIZE;
 
       // 이동 음향 효과
@@ -1277,12 +1285,15 @@ const App: React.FC = () => {
         updateTeamsInSession(updatedTeams);
       }
 
-      // 모든 칸 이동 완료
-      if (currentStep >= steps) {
-        clearInterval(moveInterval);
+      // 스타트 지점 통과 체크 (이전 위치가 31이고 현재 위치가 0인 경우)
+      const justPassedStart = previousPos === BOARD_SIZE - 1 && intermediatePos === 0;
 
-        // 한 바퀴 완주 처리
-        if (currentSession && passedStart) {
+      if (justPassedStart && currentStep < steps) {
+        // 스타트 지점을 통과했고 아직 이동할 칸이 남아있음 → 보너스 팝업 표시
+        const newLapCount = teamToMove.lapCount + 1;
+
+        // 보너스 즉시 적용
+        if (currentSession) {
           const updatedTeams = currentSession.teams.map(t => {
             if (t.id === teamToMove.id) {
               let newResources = { ...t.resources };
@@ -1292,55 +1303,165 @@ const App: React.FC = () => {
               newResources.competency += LAP_BONUS.competency; // +10
               newResources.insight += LAP_BONUS.insight;      // +10
 
-              addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
-              soundEffects.playLapComplete();
+              addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 자본금+20, 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
 
-              return { ...t, position: finalPos, resources: newResources, lapCount: t.lapCount + 1 };
+              return { ...t, resources: newResources, lapCount: newLapCount };
             }
             return t;
           });
           updateTeamsInSession(updatedTeams);
         }
 
-        // 도착 칸 정보 저장 (카드 미리보기용)
-        const landingSquare = BOARD_SQUARES.find(s => s.index === finalPos);
+        // 팝업 표시
+        setLapBonusInfo({ teamName: teamToMove.name, lapCount: newLapCount });
+        setShowLapBonus(true);
 
-        // 미리보기를 표시할 특수 칸 타입들 (출발 칸 제외)
-        const previewSquareTypes = [
-          SquareType.City,       // 역량카드
-          SquareType.GoldenKey,  // 찬스 카드
-          SquareType.Island,     // 번아웃 존
-          SquareType.WorldTour,  // 글로벌 기회
-          SquareType.Space,      // 도전 과제
-          SquareType.Fund,       // 성장 펀드
-        ];
+        // 팝업이 닫힌 후 나머지 이동 계속 (handleLapBonusComplete에서 처리)
+        // 남은 스텝 수를 저장
+        const remainingSteps = steps - currentStep;
+        pendingMoveRef.current = { teamToMove: { ...teamToMove, position: intermediatePos, lapCount: newLapCount }, remainingSteps, finalPos };
+        return;
+      }
 
-        if (landingSquare && previewSquareTypes.includes(landingSquare.type)) {
-          // 카드 미리보기 표시
-          setPendingSquare(landingSquare);
-          setShowCompetencyPreview(true);
+      // 모든 칸 이동 완료
+      if (currentStep >= steps) {
+        // 마지막 칸이 정확히 스타트 지점인 경우 (finalPos === 0이고 passedStart)
+        if (passedStart && finalPos === 0) {
+          const newLapCount = teamToMove.lapCount + 1;
 
-          // 3초 후 자동으로 진행 (모바일에서 주사위 굴린 경우 대비)
-          setTimeout(() => {
-            // 아직 미리보기가 표시 중이면 자동으로 진행
-            setShowCompetencyPreview(prev => {
-              if (prev) {
-                const updatedTeam = { ...teamToMove, position: finalPos };
-                handleLandOnSquare(updatedTeam, finalPos);
-                return false;
+          if (currentSession) {
+            const updatedTeams = currentSession.teams.map(t => {
+              if (t.id === teamToMove.id) {
+                let newResources = { ...t.resources };
+                newResources.capital += 20;
+                newResources.energy += LAP_BONUS.energy;
+                newResources.trust += LAP_BONUS.trust;
+                newResources.competency += LAP_BONUS.competency;
+                newResources.insight += LAP_BONUS.insight;
+
+                addLog(`🎉 ${t.name} 한 바퀴 완주! 보너스 획득: 자본금+20, 에너지+${LAP_BONUS.energy}, 신뢰+${LAP_BONUS.trust}, 스킬+${LAP_BONUS.competency}, 인사이트+${LAP_BONUS.insight}`);
+
+                return { ...t, position: finalPos, resources: newResources, lapCount: newLapCount };
               }
-              return prev;
+              return t;
             });
-          }, 3000);
-        } else {
-          // 출발 칸 등은 바로 handleLandOnSquare 호출
-          setTimeout(() => {
+            updateTeamsInSession(updatedTeams);
+          }
+
+          // 팝업 표시 후 handleLandOnSquare 호출
+          setLapBonusInfo({ teamName: teamToMove.name, lapCount: newLapCount });
+          setShowLapBonus(true);
+          pendingMoveRef.current = { teamToMove: { ...teamToMove, position: finalPos, lapCount: newLapCount }, remainingSteps: 0, finalPos };
+          return;
+        }
+
+        // 이동 완료 처리
+        finishMove(teamToMove, finalPos);
+        return;
+      }
+
+      // 다음 스텝 예약
+      setTimeout(moveOneStep, 400);
+    };
+
+    // 첫 스텝 시작
+    setTimeout(moveOneStep, 400);
+  };
+
+  // 이동 완료 후 처리
+  const finishMove = (teamToMove: Team, finalPos: number) => {
+    // 도착 칸 정보 저장 (카드 미리보기용)
+    const landingSquare = BOARD_SQUARES.find(s => s.index === finalPos);
+
+    // 미리보기를 표시할 특수 칸 타입들 (출발 칸 제외)
+    const previewSquareTypes = [
+      SquareType.City,       // 역량카드
+      SquareType.GoldenKey,  // 찬스 카드
+      SquareType.Island,     // 번아웃 존
+      SquareType.WorldTour,  // 글로벌 기회
+      SquareType.Space,      // 도전 과제
+      SquareType.Fund,       // 성장 펀드
+    ];
+
+    if (landingSquare && previewSquareTypes.includes(landingSquare.type)) {
+      // 카드 미리보기 표시
+      setPendingSquare(landingSquare);
+      setShowCompetencyPreview(true);
+
+      // 3초 후 자동으로 진행 (모바일에서 주사위 굴린 경우 대비)
+      setTimeout(() => {
+        // 아직 미리보기가 표시 중이면 자동으로 진행
+        setShowCompetencyPreview(prev => {
+          if (prev) {
             const updatedTeam = { ...teamToMove, position: finalPos };
             handleLandOnSquare(updatedTeam, finalPos);
-          }, 500);
-        }
+            return false;
+          }
+          return prev;
+        });
+      }, 3000);
+    } else {
+      // 출발 칸 등은 바로 handleLandOnSquare 호출
+      setTimeout(() => {
+        const updatedTeam = { ...teamToMove, position: finalPos };
+        handleLandOnSquare(updatedTeam, finalPos);
+      }, 500);
+    }
+  };
+
+  // 보류 중인 이동 정보 (한 바퀴 보너스 팝업 후 계속 이동하기 위함)
+  const pendingMoveRef = useRef<{ teamToMove: Team; remainingSteps: number; finalPos: number } | null>(null);
+
+  // 한 바퀴 보너스 팝업 완료 핸들러
+  const handleLapBonusComplete = () => {
+    setShowLapBonus(false);
+    setLapBonusInfo(null);
+
+    // 보류 중인 이동이 있으면 계속
+    if (pendingMoveRef.current) {
+      const { teamToMove, remainingSteps, finalPos } = pendingMoveRef.current;
+      pendingMoveRef.current = null;
+
+      if (remainingSteps > 0) {
+        // 남은 스텝 이동 계속
+        continueMove(teamToMove, remainingSteps, finalPos);
+      } else {
+        // 이동 완료 (스타트 지점에 정확히 도착한 경우)
+        finishMove(teamToMove, finalPos);
       }
-    }, 400); // 한 칸당 400ms
+    }
+  };
+
+  // 남은 스텝 계속 이동
+  const continueMove = (teamToMove: Team, remainingSteps: number, finalPos: number) => {
+    let currentStep = 0;
+    const startPos = teamToMove.position;
+
+    const moveOneStep = () => {
+      currentStep++;
+      const intermediatePos = (startPos + currentStep) % BOARD_SIZE;
+
+      soundEffects.playMove();
+
+      if (currentSession) {
+        const updatedTeams = currentSession.teams.map(t => {
+          if (t.id === teamToMove.id) {
+            return { ...t, position: intermediatePos };
+          }
+          return t;
+        });
+        updateTeamsInSession(updatedTeams);
+      }
+
+      if (currentStep >= remainingSteps) {
+        finishMove({ ...teamToMove, position: finalPos }, finalPos);
+        return;
+      }
+
+      setTimeout(moveOneStep, 400);
+    };
+
+    setTimeout(moveOneStep, 400);
   };
 
   // 역량카드 미리보기 완료 핸들러
@@ -2411,6 +2532,22 @@ const App: React.FC = () => {
           : null)}
         square={pendingSquare}
         onComplete={handleCompetencyPreviewComplete}
+        duration={5000}
+      />
+
+      {/* 한 바퀴 완주 보너스 팝업 */}
+      <LapBonusPopup
+        visible={showLapBonus}
+        teamName={lapBonusInfo?.teamName || ''}
+        lapCount={lapBonusInfo?.lapCount || 1}
+        bonuses={{
+          capital: 20,
+          energy: LAP_BONUS.energy,
+          trust: LAP_BONUS.trust,
+          competency: LAP_BONUS.competency,
+          insight: LAP_BONUS.insight,
+        }}
+        onComplete={handleLapBonusComplete}
         duration={5000}
       />
 
