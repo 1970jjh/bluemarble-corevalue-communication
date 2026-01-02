@@ -112,7 +112,9 @@ const App: React.FC = () => {
 
   // 관리자 대시보드 상태
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
-  const [customCards, setCustomCards] = useState<GameCard[]>([]);
+
+  // 세션의 커스텀 카드 가져오기 (세션별로 저장됨)
+  const sessionCustomCards = currentSession?.customCards || [];
 
   // Ref to track local operations in progress (to prevent Firebase from overriding local state)
   const localOperationInProgress = useRef(false);
@@ -738,6 +740,28 @@ const App: React.FC = () => {
     }));
   };
 
+  // 세션에 커스텀 카드 저장 (세션별 맞춤형 카드)
+  const updateCustomCardsInSession = async (cards: GameCard[]) => {
+    if (!currentSessionId) return;
+
+    // Firebase에 저장 (설정되어 있으면)
+    const isFirebaseConfigured = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+    if (isFirebaseConfigured) {
+      try {
+        await firestoreService.updateSession(currentSessionId, { customCards: cards });
+      } catch (error) {
+        console.error('Firebase 커스텀 카드 업데이트 실패:', error);
+      }
+    }
+
+    setSessions(prev => prev.map(s => {
+      if (s.id === currentSessionId) {
+        return { ...s, customCards: cards };
+      }
+      return s;
+    }));
+  };
+
   // Timer - gamePhase만 의존하여 불필요한 재생성 방지
   useEffect(() => {
     let interval: any;
@@ -989,8 +1013,9 @@ const App: React.FC = () => {
     const sessionCardType = getCardTypeFromVersion(currentSession?.version);
     const modeCards = sessionCardType === 'CoreValue' ? CORE_VALUE_CARDS : COMMUNICATION_CARDS;
 
-    // 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
-    const allCards = customCards.length > 0 ? customCards : [...modeCards, ...EVENT_CARDS];
+    // 세션의 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
+    const sessionCards = currentSession?.customCards || [];
+    const allCards = sessionCards.length > 0 ? sessionCards : [...modeCards, ...EVENT_CARDS];
 
     // Helper to pick random card by type
     const pickRandomCard = (type: string, fallbackCard?: GameCard) => {
@@ -1590,39 +1615,60 @@ const App: React.FC = () => {
     const square = BOARD_SQUARES.find(s => s.index === index);
     if (!square) return;
 
-    // 세션 모드에 맞는 카드 타입 결정
+    // 세션 모드에 맞는 카드 배열 선택
     const sessionCardType = getCardTypeFromVersion(currentSession?.version);
+    const modeCards = sessionCardType === 'CoreValue' ? CORE_VALUE_CARDS : COMMUNICATION_CARDS;
+
+    // 세션의 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
+    const sessionCards = currentSession?.customCards || [];
+    const allCards = sessionCards.length > 0 ? sessionCards : [...modeCards, ...EVENT_CARDS];
 
     let cardToPreview: GameCard | undefined;
 
-    // Helper to find card (City는 정확한 매칭, 나머지는 랜덤)
-    const findCard = (filter: (c: GameCard) => boolean) => {
-      const candidates = SAMPLE_CARDS.filter(filter);
-      return candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : undefined;
+    // Helper to find card by type
+    const findCardByType = (type: string) => {
+      const candidates = allCards.filter(c => c.type === type);
+      if (candidates.length > 0) {
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
+      // EVENT_CARDS에서도 찾기
+      const eventCandidates = EVENT_CARDS.filter(c => c.type === type);
+      return eventCandidates.length > 0 ? eventCandidates[Math.floor(Math.random() * eventCandidates.length)] : undefined;
     };
 
     switch (square.type) {
       case SquareType.City:
-        // 미리보기: 세션 모드와 칸의 역량에 맞는 특정 카드 표시
-        // 예: Leader 세션 + time-management 칸 → LEAD-TM-001 카드
-        cardToPreview = SAMPLE_CARDS.find(c => c.type === sessionCardType && c.competency === square.competency);
+        // 역량(competency)에 맞는 카드 선택
+        cardToPreview = allCards.find(c => c.competency === square.competency);
+        if (!cardToPreview) {
+          cardToPreview = modeCards.find(c => c.competency === square.competency);
+        }
         break;
       case SquareType.GoldenKey:
-        // Exclude ventures, keep general events or chance
-        cardToPreview = findCard(c => c.type === 'Event' && !c.title.includes('사내 벤처'));
+        // 우연한 기회 - Event 카드
+        cardToPreview = findCardByType('Event');
         break;
       case SquareType.Fund:
-        // Specifically look for Internal Venture cards
-        cardToPreview = findCard(c => c.title.includes('사내 벤처'));
+        // 성장 펀드 - Growth 카드
+        cardToPreview = findCardByType('Growth');
+        if (!cardToPreview) {
+          cardToPreview = findCardByType('Event');  // fallback
+        }
         break;
       case SquareType.Space:
-        cardToPreview = findCard(c => c.type === 'Challenge');
+        // 도전 과제 - Challenge 카드
+        cardToPreview = findCardByType('Challenge');
         break;
       case SquareType.WorldTour:
-        cardToPreview = findCard(c => c.type === 'CoreValue');
+        // 특별 이벤트 - Event 카드
+        cardToPreview = findCardByType('Event');
         break;
       case SquareType.Island:
-        cardToPreview = findCard(c => c.type === 'Burnout');
+        // 번아웃 - Burnout 카드
+        cardToPreview = findCardByType('Burnout');
+        break;
+      case SquareType.Start:
+        // 출발 칸 - 특별한 카드 없음, 안내 메시지
         break;
     }
 
@@ -2267,9 +2313,9 @@ const App: React.FC = () => {
         isOpen={showAdminDashboard}
         onClose={() => setShowAdminDashboard(false)}
         gameMode={currentSession?.version || GameVersion.CoreValue}
-        customCards={customCards}
+        customCards={sessionCustomCards}
         onSaveCards={(cards) => {
-          setCustomCards(cards);
+          updateCustomCardsInSession(cards);
         }}
       />
     </div>

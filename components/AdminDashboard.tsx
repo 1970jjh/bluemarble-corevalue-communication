@@ -9,7 +9,8 @@ import {
   CORE_VALUE_CARDS,
   COMMUNICATION_CARDS,
   EVENT_CARDS,
-  COMPETENCY_INFO
+  COMPETENCY_INFO,
+  BOARD_SQUARES
 } from '../constants';
 import {
   Settings,
@@ -39,6 +40,7 @@ interface AdminDashboardProps {
 interface ExtendedGameCard extends GameCard {
   competencyNameKo?: string;
   competencyNameEn?: string;
+  boardIndex?: number;  // 보드 위치
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -48,21 +50,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   customCards,
   onSaveCards
 }) => {
-  // 현재 모드에 맞는 기본 카드 가져오기
+  // 현재 모드에 맞는 기본 카드 가져오기 (보드 순서대로 정렬)
   const getDefaultCards = (): ExtendedGameCard[] => {
-    const baseCards = gameMode === GameVersion.CoreValue
-      ? [...CORE_VALUE_CARDS, ...EVENT_CARDS]
-      : [...COMMUNICATION_CARDS, ...EVENT_CARDS];
+    const modeCards = gameMode === GameVersion.CoreValue
+      ? CORE_VALUE_CARDS
+      : COMMUNICATION_CARDS;
 
-    // 역량 정보 추가
-    return baseCards.map(card => {
-      const competencyInfo = card.competency ? COMPETENCY_INFO.find(c => c.id === card.competency) : null;
-      return {
-        ...card,
-        competencyNameKo: competencyInfo?.nameKo || '',
-        competencyNameEn: competencyInfo?.nameEn || ''
-      };
+    // 보드 순서에 따라 역량 카드 정렬
+    const sortedCompetencyCards: ExtendedGameCard[] = [];
+    const usedCardIds = new Set<string>();
+
+    // 보드 칸 순서대로 카드 추가
+    BOARD_SQUARES.forEach(square => {
+      if (square.competency) {
+        const card = modeCards.find(c => c.competency === square.competency);
+        if (card && !usedCardIds.has(card.id)) {
+          const competencyInfo = COMPETENCY_INFO.find(c => c.id === card.competency);
+          sortedCompetencyCards.push({
+            ...card,
+            competencyNameKo: competencyInfo?.nameKo || '',
+            competencyNameEn: competencyInfo?.nameEn || '',
+            boardIndex: square.index  // 보드 위치 추가
+          });
+          usedCardIds.add(card.id);
+        }
+      }
     });
+
+    // 보드에 없는 나머지 역량 카드 추가
+    modeCards.forEach(card => {
+      if (!usedCardIds.has(card.id)) {
+        const competencyInfo = card.competency ? COMPETENCY_INFO.find(c => c.id === card.competency) : null;
+        sortedCompetencyCards.push({
+          ...card,
+          competencyNameKo: competencyInfo?.nameKo || '',
+          competencyNameEn: competencyInfo?.nameEn || ''
+        });
+      }
+    });
+
+    // 이벤트 카드 추가 (역량 정보 없음)
+    const eventCards: ExtendedGameCard[] = EVENT_CARDS.map(card => ({
+      ...card,
+      competencyNameKo: '',
+      competencyNameEn: ''
+    }));
+
+    return [...sortedCompetencyCards, ...eventCards];
   };
 
   // 상태 관리
@@ -390,16 +424,28 @@ JSON만 응답하세요.`;
                     onClick={() => setExpandedCardId(isExpanded ? null : card.id)}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-3 h-3 rounded-full ${
-                        card.type === 'CoreValue' ? 'bg-blue-500' :
-                        card.type === 'Communication' ? 'bg-green-500' :
-                        card.type === 'Event' ? 'bg-yellow-500' :
-                        card.type === 'Burnout' ? 'bg-red-500' :
-                        card.type === 'Challenge' ? 'bg-purple-500' :
-                        'bg-gray-500'
-                      }`} />
+                      {/* 보드 위치 표시 */}
+                      {card.boardIndex !== undefined ? (
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 border-2 border-indigo-300 flex items-center justify-center font-bold text-indigo-700 text-sm">
+                          {card.boardIndex}
+                        </div>
+                      ) : (
+                        <div className={`w-3 h-3 rounded-full ${
+                          card.type === 'CoreValue' ? 'bg-blue-500' :
+                          card.type === 'Communication' ? 'bg-green-500' :
+                          card.type === 'Event' ? 'bg-yellow-500' :
+                          card.type === 'Burnout' ? 'bg-red-500' :
+                          card.type === 'Challenge' ? 'bg-purple-500' :
+                          'bg-gray-500'
+                        }`} />
+                      )}
                       <div>
-                        <div className="font-semibold text-gray-800">{card.title}</div>
+                        <div className="font-semibold text-gray-800">
+                          {card.title}
+                          {card.boardIndex !== undefined && (
+                            <span className="ml-2 text-xs font-normal text-gray-400">(보드 {card.boardIndex}번 칸)</span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-500">
                           {card.competencyNameKo ? (
                             <span>{card.competencyNameKo} ({card.competencyNameEn})</span>
