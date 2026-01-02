@@ -34,7 +34,9 @@ import {
   getCardsByMode,
   CORE_VALUE_CARDS,
   COMMUNICATION_CARDS,
-  EVENT_CARDS
+  NEW_EMPLOYEE_CARDS,
+  EVENT_CARDS,
+  getCompetencyCardsByMode
 } from './constants';
 import { Smartphone, Monitor, QrCode, X, Copy, Check, Settings } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -925,7 +927,7 @@ const App: React.FC = () => {
   // --- Core Game Actions ---
 
   // GameVersion을 카드 타입으로 변환하는 헬퍼 함수
-  const getCardTypeFromVersion = (version: GameVersion | string | undefined): string => {
+  const getCardTypeFromVersion = (version: GameVersion | string | undefined): 'CoreValue' | 'Communication' | 'NewEmployee' => {
     switch (version) {
       case GameVersion.CoreValue:
       case '핵심가치':
@@ -933,8 +935,25 @@ const App: React.FC = () => {
       case GameVersion.Communication:
       case '소통&갈등관리':
         return 'Communication';
+      case GameVersion.NewEmployee:
+      case '신입직원 직장생활':
+        return 'NewEmployee';
       default:
         return 'CoreValue'; // 기본값
+    }
+  };
+
+  // 모드별 역량 카드 배열 가져오기 헬퍼 함수
+  const getModeCards = (mode: 'CoreValue' | 'Communication' | 'NewEmployee') => {
+    switch (mode) {
+      case 'CoreValue':
+        return CORE_VALUE_CARDS;
+      case 'Communication':
+        return COMMUNICATION_CARDS;
+      case 'NewEmployee':
+        return NEW_EMPLOYEE_CARDS;
+      default:
+        return CORE_VALUE_CARDS;
     }
   };
 
@@ -1011,7 +1030,7 @@ const App: React.FC = () => {
 
     // 세션 모드에 맞는 카드 배열 선택
     const sessionCardType = getCardTypeFromVersion(currentSession?.version);
-    const modeCards = sessionCardType === 'CoreValue' ? CORE_VALUE_CARDS : COMMUNICATION_CARDS;
+    const modeCards = getModeCards(sessionCardType);
 
     // 세션의 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
     const sessionCards = currentSession?.customCards || [];
@@ -1617,7 +1636,7 @@ const App: React.FC = () => {
 
     // 세션 모드에 맞는 카드 배열 선택
     const sessionCardType = getCardTypeFromVersion(currentSession?.version);
-    const modeCards = sessionCardType === 'CoreValue' ? CORE_VALUE_CARDS : COMMUNICATION_CARDS;
+    const modeCards = getModeCards(sessionCardType);
 
     // 세션의 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
     const sessionCards = currentSession?.customCards || [];
@@ -1651,7 +1670,7 @@ const App: React.FC = () => {
       // 커스텀 카드에서도 확인
       if (sessionCards.length > 0) {
         const unmappedCustomCards = sessionCards.filter(c =>
-          (c.type === sessionCardType || c.type === 'CoreValue' || c.type === 'Communication') &&
+          (c.type === sessionCardType || c.type === 'CoreValue' || c.type === 'Communication' || c.type === 'NewEmployee') &&
           c.competency && !boardCompetencies.includes(c.competency)
         );
         return unmappedCustomCards.length > 0 ? unmappedCustomCards : unmappedCards;
@@ -2345,7 +2364,7 @@ const App: React.FC = () => {
       <CompetencyCardPreview
         visible={showCompetencyPreview}
         card={activeCard || (pendingSquare ?
-          (getCardTypeFromVersion(currentSession?.version) === 'CoreValue' ? CORE_VALUE_CARDS : COMMUNICATION_CARDS)
+          getModeCards(getCardTypeFromVersion(currentSession?.version))
             .find(c => c.competency === pendingSquare.competency) || null
           : null)}
         square={pendingSquare}

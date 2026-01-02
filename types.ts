@@ -1,34 +1,34 @@
 
 // ============================================================
-// 핵심가치 & 소통/갈등관리 브루마블 교육게임 타입 정의
+// 핵심가치 & 소통/갈등관리 & 신입직원 브루마블 교육게임 타입 정의
 // ============================================================
 
-// 핵심가치 모드 22개 역량
+// 핵심가치 모드 22개 역량 (국내 대기업 핵심가치 기반)
 export type CoreValueCompetencyType =
-  | 'integrity'              // 정직/진실성
-  | 'respect'                // 존중
-  | 'responsibility'         // 책임감
-  | 'trust-building'         // 신뢰 구축
-  | 'customer-first'         // 고객 중심
-  | 'innovation-spirit'      // 혁신 정신
-  | 'excellence'             // 탁월성 추구
-  | 'teamwork'               // 팀워크
-  | 'ownership'              // 주인의식
-  | 'transparency'           // 투명성
-  | 'fairness'               // 공정성
-  | 'passion'                // 열정
-  | 'humility'               // 겸손
-  | 'courage'                // 용기
-  | 'sustainability'         // 지속가능성
-  | 'professionalism'        // 전문성
-  | 'adaptability'           // 적응력
-  | 'empathy'                // 공감
-  | 'accountability'         // 책무성
-  | 'collaboration'          // 협업
-  | 'safety-first'           // 안전 우선
-  | 'continuous-improvement'; // 지속적 개선
+  | 'people-first'           // 인재제일 (삼성)
+  | 'pursuit-excellence'     // 최고지향 (삼성)
+  | 'leading-change'         // 변화선도 (삼성)
+  | 'integrity-mgmt'         // 정도경영 (삼성, LG)
+  | 'win-win'                // 상생추구 (삼성, 포스코)
+  | 'customer-first'         // 고객 최우선 (현대차, 롯데)
+  | 'challenge-execute'      // 도전적 실행 (현대차)
+  | 'communication-collab'   // 소통과 협력 (현대차)
+  | 'respect-talent'         // 인재 존중 (현대차)
+  | 'global-orientation'     // 글로벌 지향 (현대차)
+  | 'safety'                 // 안전 (포스코, HD현대)
+  | 'ethics'                 // 윤리 (포스코)
+  | 'creativity'             // 창의 (포스코, CJ)
+  | 'challenge'              // 도전 (한화, 롯데, 신세계)
+  | 'dedication'             // 헌신 (한화)
+  | 'passion'                // 열정 (CJ, GS)
+  | 'honesty'                // 정직 (CJ, 두산)
+  | 'professionalism'        // 전문성 (한진)
+  | 'responsibility'         // 책임 (효성)
+  | 'innovation'             // 혁신 (신세계, 효성)
+  | 'trust'                  // 신뢰 (카카오, 네이버)
+  | 'social-responsibility'; // 사회적 책임 (카카오, 두산)
 
-// 소통&갈등관리 모드 22개 역량
+// 소통&갈등관리 모드 22개 역량 (재미있는 직장 상황)
 export type CommunicationCompetencyType =
   | 'active-listening'       // 적극적 경청
   | 'clear-expression'       // 명확한 표현
@@ -53,8 +53,33 @@ export type CommunicationCompetencyType =
   | 'apology-forgiveness'    // 사과와 용서
   | 'team-harmony';          // 팀 화합
 
+// 신입직원 직장생활 모드 22개 역량
+export type NewEmployeeCompetencyType =
+  | 'elevator-etiquette'     // 엘리베이터 예절
+  | 'honorific-usage'        // 호칭 사용
+  | 'dress-code'             // 복장 TPO
+  | 'punctuality'            // 출근 시간 관리
+  | 'leave-etiquette'        // 퇴근 예절
+  | 'phone-etiquette'        // 전화 예절
+  | 'business-card'          // 명함 교환
+  | 'file-management'        // 파일 버전 관리
+  | 'office-equipment'       // 사무기기 사용
+  | 'meeting-notes'          // 회의록 작성
+  | 'schedule-management'    // 일정 관리
+  | 'email-attachment'       // 메일 첨부
+  | 'email-cc'               // 수신/참조 구분
+  | 'task-clarification'     // 업무지시 확인
+  | 'progress-report'        // 중간보고
+  | 'mistake-handling'       // 실수 대처
+  | 'messenger-etiquette'    // 메신저 사용
+  | 'timing-sense'           // 질문 타이밍
+  | 'document-writing'       // 문서 작성
+  | 'verbal-report'          // 구두 보고
+  | 'senior-interaction'     // 선배 응대
+  | 'team-dinner';           // 회식 예절
+
 // 통합 역량 타입
-export type CompetencyType = CoreValueCompetencyType | CommunicationCompetencyType;
+export type CompetencyType = CoreValueCompetencyType | CommunicationCompetencyType | NewEmployeeCompetencyType;
 
 export enum TeamColor {
   Red = 'Red',
@@ -74,10 +99,11 @@ export enum TeamColor {
   Rose = 'Rose'
 }
 
-// 2가지 게임 모드
+// 3가지 게임 모드
 export enum GameVersion {
   CoreValue = '핵심가치',
-  Communication = '소통&갈등관리'
+  Communication = '소통&갈등관리',
+  NewEmployee = '신입직원 직장생활'
 }
 
 export enum SquareType {
@@ -137,7 +163,7 @@ export interface BoardSquare {
   type: SquareType;
   name: string;
   price?: number;
-  module?: 'CoreValue' | 'Communication';  // 모드별 구분
+  module?: 'CoreValue' | 'Communication' | 'NewEmployee';  // 모드별 구분
   competency?: CompetencyType; // 칸에 해당하는 역량
   description?: string;
 }
@@ -151,10 +177,12 @@ export interface Choice {
 export type CardType =
   | 'CoreValue'      // 핵심가치 모드 카드
   | 'Communication'  // 소통&갈등관리 모드 카드
+  | 'NewEmployee'    // 신입직원 직장생활 모드 카드
   | 'Event'          // 우연한 기회 이벤트
   | 'Challenge'      // 도전 과제
   | 'Burnout'        // 번아웃
-  | 'Growth';        // 성장 기회
+  | 'Growth'         // 성장 기회
+  | 'Special';       // 특별 이벤트
 
 export interface GameCard {
   id: string;
@@ -230,5 +258,5 @@ export interface CompetencyInfo {
   nameKo: string;
   nameEn: string;
   description: string;
-  mode: 'CoreValue' | 'Communication';
+  mode: 'CoreValue' | 'Communication' | 'NewEmployee';
 }

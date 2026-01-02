@@ -9,9 +9,11 @@ import {
 import {
   CORE_VALUE_CARDS,
   COMMUNICATION_CARDS,
+  NEW_EMPLOYEE_CARDS,
   EVENT_CARDS,
   COMPETENCY_INFO,
-  BOARD_SQUARES
+  BOARD_SQUARES,
+  NEW_EMPLOYEE_BOARD_NAMES
 } from '../constants';
 import {
   Settings,
@@ -53,10 +55,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   // 현재 모드에 맞는 기본 카드 가져오기 (보드 순서대로 정렬)
   const getDefaultCards = (): ExtendedGameCard[] => {
-    const modeCards = gameMode === GameVersion.CoreValue
-      ? CORE_VALUE_CARDS
-      : COMMUNICATION_CARDS;
-    const modeType = gameMode === GameVersion.CoreValue ? 'CoreValue' : 'Communication';
+    let modeCards: GameCard[];
+    let modeType: 'CoreValue' | 'Communication' | 'NewEmployee';
+
+    switch (gameMode) {
+      case GameVersion.CoreValue:
+        modeCards = CORE_VALUE_CARDS;
+        modeType = 'CoreValue';
+        break;
+      case GameVersion.Communication:
+        modeCards = COMMUNICATION_CARDS;
+        modeType = 'Communication';
+        break;
+      case GameVersion.NewEmployee:
+        modeCards = NEW_EMPLOYEE_CARDS;
+        modeType = 'NewEmployee';
+        break;
+      default:
+        modeCards = CORE_VALUE_CARDS;
+        modeType = 'CoreValue';
+    }
 
     // 보드 순서에 따라 역량 카드 정렬
     const sortedCompetencyCards: ExtendedGameCard[] = [];
@@ -253,7 +271,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 다음 역량에 대한 교육용 시나리오 카드를 만들어주세요.
 
 역량명: ${aiInputName}
-게임 모드: ${gameMode === GameVersion.CoreValue ? '핵심가치' : '소통&갈등관리'}
+게임 모드: ${gameMode === GameVersion.CoreValue ? '핵심가치' : gameMode === GameVersion.Communication ? '소통&갈등관리' : '신입직원 직장생활'}
 
 다음 JSON 형식으로 응답해주세요:
 {
@@ -352,7 +370,7 @@ JSON만 응답하세요.`;
               <div>
                 <h2 className="text-2xl font-bold">관리자 대시보드</h2>
                 <p className="text-indigo-200 text-sm">
-                  {gameMode === GameVersion.CoreValue ? '핵심가치' : '소통&갈등관리'} 모드 카드 관리
+                  {gameMode === GameVersion.CoreValue ? '핵심가치' : gameMode === GameVersion.Communication ? '소통&갈등관리' : '신입직원 직장생활'} 모드 카드 관리
                 </p>
               </div>
             </div>
@@ -466,6 +484,7 @@ JSON만 응답하세요.`;
                         <div className={`w-3 h-3 rounded-full ${
                           card.type === 'CoreValue' ? 'bg-blue-500' :
                           card.type === 'Communication' ? 'bg-green-500' :
+                          card.type === 'NewEmployee' ? 'bg-teal-500' :
                           card.type === 'Event' ? 'bg-yellow-500' :
                           card.type === 'Burnout' ? 'bg-red-500' :
                           card.type === 'Challenge' ? 'bg-purple-500' :
