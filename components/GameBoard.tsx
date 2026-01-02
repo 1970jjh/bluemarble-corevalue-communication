@@ -76,14 +76,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
 
   // 모드별 배경 이미지
   const bgImages: Record<string, string> = {
-    [GameVersion.Leader]: 'https://i.ibb.co/jPpGrZ1S/image.png',      // 리더십
-    [GameVersion.Follower]: 'https://i.ibb.co/ks7LnDdK/image.png',    // 팔로워십
-    [GameVersion.Team]: 'https://i.ibb.co/PGMd9GS8/image.png',        // 팀쉽
-    [GameVersion.Self]: 'https://i.ibb.co/Rpd0VG9G/image.png',        // 셀프리더십
+    [GameVersion.CoreValue]: 'https://i.ibb.co/YF5PkBKv/Infographic-5.png',           // 핵심가치
+    [GameVersion.Communication]: 'https://i.ibb.co/hxvfdNgW/Infographic-6.png',       // 소통&갈등관리
+    [GameVersion.NewEmployee]: 'https://i.ibb.co/QvXK8zqD/Infographic-7.png',         // 신입사원 직장생활
   };
 
   // 현재 게임 모드에 맞는 배경 이미지 선택
-  const currentBgImage = bgImages[gameMode] || bgImages[GameVersion.Self];
+  const currentBgImage = bgImages[gameMode] || bgImages[GameVersion.CoreValue];
 
   return (
     <div className="flex flex-col items-center gap-4">
