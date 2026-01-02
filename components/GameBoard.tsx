@@ -8,7 +8,25 @@ interface GameBoardProps {
   gameMode: string;
 }
 
+// 팀별 캐릭터 이미지 (8개)
+const CHARACTER_IMAGES = [
+  'https://i.ibb.co/RGcCcwBf/1.png',  // 1조
+  'https://i.ibb.co/MkKQpP8W/2.png',  // 2조
+  'https://i.ibb.co/KpF32MRT/3.png',  // 3조
+  'https://i.ibb.co/5XvVbLmQ/4.png',  // 4조
+  'https://i.ibb.co/Y43M160r/5.png',  // 5조
+  'https://i.ibb.co/hRZ7RJZ4/6.png',  // 6조
+  'https://i.ibb.co/BH7hrmDZ/7.png',  // 7조
+  'https://i.ibb.co/kgqKfW7Q/8.png',  // 8조
+];
+
 const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode }) => {
+  // 팀 번호에 해당하는 캐릭터 이미지 가져오기 (9조 이상은 순환)
+  const getCharacterImage = (teamNumber: number): string => {
+    const index = (teamNumber - 1) % CHARACTER_IMAGES.length;
+    return CHARACTER_IMAGES[index];
+  };
+
   // 모드별 보드 칸 이름 가져오기
   const getSquareDisplayName = (square: BoardSquare): string => {
     // 역량 칸이 아니면 기본 이름 사용
@@ -147,19 +165,35 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
               </>
             )}
 
-            {/* Team Tokens (Avatars) */}
+            {/* Team Tokens (Character Images with Speech Bubbles) */}
             <div className="absolute inset-0 pointer-events-none flex flex-wrap items-center justify-center gap-1 p-1">
               {teams.filter(t => t.position === square.index).map(team => {
                  // Calculate Team Number (1-based index)
                  const teamNumber = teams.findIndex(t => t.id === team.id) + 1;
-                 
+
                  return (
-                  <div 
-                    key={team.id} 
-                    className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 shadow-md flex items-center justify-center text-sm font-black z-10 transform hover:scale-125 transition-transform ${getTeamTokenColor(team.color)}`}
+                  <div
+                    key={team.id}
+                    className="relative z-10 transform hover:scale-125 transition-transform"
                     title={team.name}
                   >
-                    {teamNumber}
+                    {/* Speech Bubble */}
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white border-2 border-black rounded-full px-1.5 py-0.5 text-[8px] md:text-[10px] font-black whitespace-nowrap shadow-md z-20">
+                      {teamNumber}조
+                      {/* Speech Bubble Tail */}
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"></div>
+                      <div className="absolute -bottom-[3px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-white"></div>
+                    </div>
+                    {/* Character Image */}
+                    <img
+                      src={getCharacterImage(teamNumber)}
+                      alt={`${teamNumber}조`}
+                      className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-lg"
+                      onError={(e) => {
+                        // Fallback to numbered circle if image fails
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
                 );
               })}
