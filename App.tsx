@@ -113,9 +113,6 @@ const App: React.FC = () => {
   // 관리자 대시보드 상태
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
-  // 세션의 커스텀 카드 가져오기 (세션별로 저장됨)
-  const sessionCustomCards = currentSession?.customCards || [];
-
   // Ref to track local operations in progress (to prevent Firebase from overriding local state)
   const localOperationInProgress = useRef(false);
   const localOperationTimestamp = useRef(0);
@@ -136,6 +133,9 @@ const App: React.FC = () => {
   const currentSession = sessions.find(s => s.id === currentSessionId);
   const teams = currentSession ? currentSession.teams : [];
   const currentTeam = teams[currentTurnIndex];
+
+  // 세션의 커스텀 카드 가져오기 (세션별로 저장됨)
+  const sessionCustomCards = currentSession?.customCards || [];
 
   // 참가자 접속 URL 생성
   const getJoinUrl = (accessCode: string) => {
