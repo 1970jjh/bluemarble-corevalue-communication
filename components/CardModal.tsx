@@ -145,7 +145,7 @@ const CardModal: React.FC<CardModalProps> = ({
                 </div>
               )}
             </div>
-            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight">{card.title}</h2>
+            <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight">{card.title}</h2>
           </div>
           {!result && timeLeft > 0 && (
             <div className="bg-white text-black border-4 border-black px-4 py-2 shadow-hard-sm">
@@ -159,7 +159,7 @@ const CardModal: React.FC<CardModalProps> = ({
           {/* Situation Section */}
           <div className="mb-8 border-l-8 border-gray-300 pl-6">
             <h3 className="text-black text-sm font-bold uppercase mb-2 tracking-widest">Situation</h3>
-            <p className="text-xl md:text-2xl font-bold text-gray-900 leading-snug">
+            <p className="text-2xl md:text-3xl font-bold text-gray-900 leading-snug">
               "{card.situation}"
             </p>
           </div>
@@ -371,7 +371,7 @@ const CardModal: React.FC<CardModalProps> = ({
                                 </div>
                               )}
 
-                              <h4 className="text-lg font-bold mt-6 leading-tight">{choice.text}</h4>
+                              <h4 className="text-xl md:text-2xl font-bold mt-6 leading-tight">{choice.text}</h4>
 
                               {/* 투표한 팀 목록 */}
                               {hasVotes && (
