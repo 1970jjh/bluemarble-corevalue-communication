@@ -430,6 +430,39 @@ const App: React.FC = () => {
     };
   }, [sharedSelectedChoice, sharedReasoning, aiEvaluationResult, isAiProcessing, gamePhase, currentSessionId, activeCard, saveGameStateToFirebase]);
 
+  // --- 세션의 customCards 변경 시 activeCard 실시간 업데이트 ---
+  useEffect(() => {
+    // activeCard가 있고, 세션에 customCards가 있을 때
+    if (activeCard && sessionCustomCards.length > 0) {
+      // 현재 activeCard의 ID로 최신 카드 찾기
+      const updatedCard = sessionCustomCards.find((c: GameCard) => c.id === activeCard.id);
+      if (updatedCard) {
+        // 카드 내용이 변경되었는지 확인 (깊은 비교)
+        const hasChanged =
+          updatedCard.title !== activeCard.title ||
+          updatedCard.situation !== activeCard.situation ||
+          updatedCard.learningPoint !== activeCard.learningPoint ||
+          JSON.stringify(updatedCard.choices) !== JSON.stringify(activeCard.choices);
+
+        if (hasChanged) {
+          console.log('[Card Sync] 카드 내용이 업데이트됨:', updatedCard.title);
+          setActiveCard(updatedCard);
+
+          // Firebase gameState의 currentCard도 업데이트
+          if (currentSessionId) {
+            const isFirebaseConfigured = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+            if (isFirebaseConfigured) {
+              firestoreService.updateGameState(currentSessionId, {
+                currentCard: updatedCard,
+                lastUpdated: Date.now()
+              }).catch(err => console.error('Firebase 카드 동기화 실패:', err));
+            }
+          }
+        }
+      }
+    }
+  }, [sessionCustomCards, activeCard?.id, currentSessionId]);
+
   // --- Session Logic ---
 
   const handleCreateSession = async (name: string, version: GameVersion, teamCount: number) => {
