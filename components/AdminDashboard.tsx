@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   GameCard,
   CompetencyInfo,
@@ -28,7 +28,10 @@ import {
   Check,
   AlertCircle,
   Sparkles,
-  Wand2
+  Wand2,
+  Download,
+  Upload,
+  FileJson
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -164,6 +167,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [aiInputName, setAiInputName] = useState('');
   const [showAiInput, setShowAiInput] = useState(false);
 
+  // JSON 파일 업로드 관련
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [importMessage, setImportMessage] = useState('');
+
   // 초기화: 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
   useEffect(() => {
     if (customCards && customCards.length > 0) {
@@ -236,6 +244,154 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (confirm('모든 변경사항이 초기화됩니다. 계속하시겠습니까?')) {
       setCards(getDefaultCards());
       setHasChanges(true);
+    }
+  };
+
+  // JSON 내보내기 (다운로드)
+  const handleExportJSON = () => {
+    // 역량 카드만 내보내기 (이벤트 카드 제외)
+    const competencyCards = cards.filter(card => card.competency);
+
+    // 내보내기용 간소화된 형식으로 변환
+    const exportData = competencyCards.map(card => ({
+      id: card.id,
+      competency: card.competency,
+      competencyNameKo: card.competencyNameKo || '',
+      competencyNameEn: card.competencyNameEn || '',
+      title: card.title,
+      situation: card.situation,
+      choices: card.choices || [],
+      learningPoint: card.learningPoint,
+      boardIndex: card.boardIndex
+    }));
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    const modePrefix = gameMode === GameVersion.CoreValue ? 'corevalue' :
+                       gameMode === GameVersion.Communication ? 'communication' : 'newemployee';
+    link.download = `${modePrefix}_cards_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // JSON 가져오기 (업로드)
+  const handleImportJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedCards = JSON.parse(content);
+
+        // 유효성 검사
+        if (!Array.isArray(importedCards)) {
+          throw new Error('JSON 파일은 배열 형식이어야 합니다.');
+        }
+
+        if (importedCards.length === 0) {
+          throw new Error('가져올 카드가 없습니다.');
+        }
+
+        // 각 카드 유효성 검사
+        const validatedCards: ExtendedGameCard[] = [];
+        const errors: string[] = [];
+
+        importedCards.forEach((card: any, index: number) => {
+          // 필수 필드 검사
+          if (!card.id) {
+            errors.push(`카드 ${index + 1}: id가 없습니다.`);
+            return;
+          }
+          if (!card.title) {
+            errors.push(`카드 ${index + 1}: title이 없습니다.`);
+            return;
+          }
+          if (!card.situation) {
+            errors.push(`카드 ${index + 1}: situation이 없습니다.`);
+            return;
+          }
+
+          // 선택지 유효성 검사
+          if (card.choices && !Array.isArray(card.choices)) {
+            errors.push(`카드 ${index + 1}: choices는 배열이어야 합니다.`);
+            return;
+          }
+
+          // 유효한 카드 추가
+          const existingCard = cards.find(c => c.id === card.id);
+          validatedCards.push({
+            id: card.id,
+            type: existingCard?.type || 'CoreValue',
+            competency: card.competency || existingCard?.competency,
+            competencyNameKo: card.competencyNameKo || '',
+            competencyNameEn: card.competencyNameEn || '',
+            title: card.title,
+            situation: card.situation,
+            choices: card.choices?.map((c: any) => ({
+              id: c.id || String.fromCharCode(65 + validatedCards.length),
+              text: c.text || ''
+            })) || existingCard?.choices || [],
+            learningPoint: card.learningPoint || '',
+            boardIndex: card.boardIndex
+          });
+        });
+
+        if (errors.length > 0) {
+          setImportStatus('error');
+          setImportMessage(`오류:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n... 외 ${errors.length - 3}개` : ''}`);
+          setTimeout(() => setImportStatus('idle'), 5000);
+          return;
+        }
+
+        // 기존 카드와 병합 (가져온 카드로 덮어쓰기)
+        const updatedCards = cards.map(existingCard => {
+          const importedCard = validatedCards.find(c => c.id === existingCard.id);
+          if (importedCard) {
+            return { ...existingCard, ...importedCard };
+          }
+          return existingCard;
+        });
+
+        // 새로운 카드 추가 (기존에 없던 id)
+        validatedCards.forEach(importedCard => {
+          if (!cards.find(c => c.id === importedCard.id)) {
+            updatedCards.push(importedCard);
+          }
+        });
+
+        setCards(updatedCards);
+        setHasChanges(true);
+        setImportStatus('success');
+        setImportMessage(`${validatedCards.length}개 카드를 성공적으로 가져왔습니다.`);
+        setTimeout(() => setImportStatus('idle'), 3000);
+
+      } catch (error) {
+        console.error('JSON 파싱 오류:', error);
+        setImportStatus('error');
+        setImportMessage(error instanceof Error ? error.message : 'JSON 파일 파싱에 실패했습니다.');
+        setTimeout(() => setImportStatus('idle'), 5000);
+      }
+    };
+
+    reader.onerror = () => {
+      setImportStatus('error');
+      setImportMessage('파일을 읽는 중 오류가 발생했습니다.');
+      setTimeout(() => setImportStatus('idle'), 3000);
+    };
+
+    reader.readAsText(file);
+
+    // 파일 input 초기화 (같은 파일 다시 선택 가능하도록)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -412,7 +568,34 @@ JSON만 응답하세요.`;
           </div>
 
           {/* 액션 버튼 */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* JSON 내보내기/가져오기 */}
+            <div className="flex items-center gap-1 border-r pr-2 mr-2">
+              <button
+                onClick={handleExportJSON}
+                className="flex items-center gap-2 px-3 py-2 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200"
+                title="JSON으로 내보내기"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">내보내기</span>
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
+                title="JSON 파일 가져오기"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">가져오기</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImportJSON}
+                className="hidden"
+              />
+            </div>
+
             <button
               onClick={handleReset}
               className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
@@ -452,6 +635,20 @@ JSON만 응답하세요.`;
               )}
             </button>
           </div>
+
+          {/* 가져오기 상태 메시지 */}
+          {importStatus !== 'idle' && (
+            <div className={`w-full mt-2 p-3 rounded-lg flex items-center gap-2 ${
+              importStatus === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {importStatus === 'success' ? (
+                <Check className="w-5 h-5 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              )}
+              <span className="text-sm whitespace-pre-wrap">{importMessage}</span>
+            </div>
+          )}
         </div>
 
         {/* 카드 목록 */}
