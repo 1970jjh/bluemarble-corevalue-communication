@@ -812,25 +812,47 @@ const App: React.FC = () => {
   const updateCustomCardsInSession = async (cards: GameCard[], customBoardImage?: string) => {
     if (!currentSessionId) return;
 
-    const updateData: { customCards: GameCard[]; customBoardImage?: string } = { customCards: cards };
-    if (customBoardImage !== undefined) {
+    // Firebase는 undefined 값을 지원하지 않으므로 제거
+    const cleanCard = (card: any): any => {
+      const cleaned: any = {};
+      Object.keys(card).forEach(key => {
+        const value = card[key];
+        if (value !== undefined) {
+          if (Array.isArray(value)) {
+            cleaned[key] = value.map(item =>
+              typeof item === 'object' && item !== null ? cleanCard(item) : item
+            );
+          } else if (typeof value === 'object' && value !== null) {
+            cleaned[key] = cleanCard(value);
+          } else {
+            cleaned[key] = value;
+          }
+        }
+      });
+      return cleaned;
+    };
+
+    const cleanedCards = cards.map(card => cleanCard(card));
+
+    const updateData: { customCards: GameCard[]; customBoardImage?: string } = { customCards: cleanedCards };
+    if (customBoardImage !== undefined && customBoardImage !== '') {
       updateData.customBoardImage = customBoardImage;
     }
 
-    console.log('[Card Save] 카드 저장 시작:', { sessionId: currentSessionId, cardCount: cards.length });
+    console.log('[Card Save] 카드 저장 시작:', { sessionId: currentSessionId, cardCount: cleanedCards.length });
 
     // Firebase에 저장 (설정되어 있으면)
     const isFirebaseConfigured = import.meta.env.VITE_FIREBASE_PROJECT_ID;
     if (isFirebaseConfigured) {
       try {
         await firestoreService.updateSession(currentSessionId, updateData);
-        console.log('[Card Save] Firebase 저장 성공:', { cardCount: cards.length, firstCardTitle: cards[0]?.title });
+        console.log('[Card Save] Firebase 저장 성공:', { cardCount: cleanedCards.length, firstCardTitle: cleanedCards[0]?.title });
 
         // 저장 후 즉시 확인 - 제대로 저장되었는지 검증
         const savedSession = await firestoreService.getSession(currentSessionId);
-        if (savedSession?.customCards?.length !== cards.length) {
+        if (savedSession?.customCards?.length !== cleanedCards.length) {
           console.error('[Card Save] 저장 확인 실패: 카드 수 불일치', {
-            expected: cards.length,
+            expected: cleanedCards.length,
             actual: savedSession?.customCards?.length
           });
           alert('카드 저장이 완료되지 않았습니다. 다시 시도해주세요.');
