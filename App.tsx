@@ -2751,10 +2751,18 @@ const App: React.FC = () => {
       {/* 역량카드 미리보기 팝업 */}
       <CompetencyCardPreview
         visible={showCompetencyPreview}
-        card={activeCard || (pendingSquare ?
-          getModeCards(getCardTypeFromVersion(currentSession?.version))
-            .find(c => c.competency === getCompetencyForSquare(pendingSquare.index, getCardTypeFromVersion(currentSession?.version))) || null
-          : null)}
+        card={activeCard || (pendingSquare ? (() => {
+          // 커스텀 모드: boardIndex로 카드 찾기
+          if (currentSession?.version === GameVersion.Custom && sessionCustomCards.length > 0) {
+            return sessionCustomCards.find((c: GameCard) => c.boardIndex === pendingSquare.index) || sessionCustomCards[0];
+          }
+          // 일반 모드: competency로 카드 찾기
+          const sessionCardType = getCardTypeFromVersion(currentSession?.version);
+          const targetCompetency = getCompetencyForSquare(pendingSquare.index, sessionCardType);
+          // 세션 커스텀 카드 우선, 없으면 기본 카드
+          const cardsToSearch = sessionCustomCards.length > 0 ? sessionCustomCards : getModeCards(sessionCardType);
+          return cardsToSearch.find((c: GameCard) => c.competency === targetCompetency) || null;
+        })() : null)}
         square={pendingSquare}
         onComplete={handleCompetencyPreviewComplete}
         duration={5000}
