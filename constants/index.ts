@@ -3,7 +3,7 @@ import { BoardSquare, GameCard, CompetencyType, ResourceState, SquareType } from
 // ============================================================
 // 모든 constants 모듈 re-export
 // ============================================================
-export { BOARD_SIZE, BOARD_SQUARES, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES } from './board';
+export { BOARD_SIZE, BOARD_SQUARES, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES, CUSTOM_BOARD_NAMES } from './board';
 export { COMPETENCY_INFO } from './competencyInfo';
 export { CORE_VALUE_CARDS } from './coreValueCards';
 export { COMMUNICATION_CARDS } from './communicationCards';
@@ -11,7 +11,7 @@ export { NEW_EMPLOYEE_CARDS } from './newEmployeeCards';
 export { EVENT_CARDS } from './eventCards';
 
 // 개별 import (내부 사용)
-import { BOARD_SQUARES, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES } from './board';
+import { BOARD_SQUARES, CORE_VALUE_BOARD_NAMES, COMMUNICATION_BOARD_NAMES, NEW_EMPLOYEE_BOARD_NAMES, CUSTOM_BOARD_NAMES } from './board';
 import { CORE_VALUE_CARDS } from './coreValueCards';
 import { COMMUNICATION_CARDS } from './communicationCards';
 import { NEW_EMPLOYEE_CARDS } from './newEmployeeCards';

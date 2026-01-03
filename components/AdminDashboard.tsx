@@ -39,7 +39,8 @@ interface AdminDashboardProps {
   onClose: () => void;
   gameMode: GameVersion;
   customCards: GameCard[];
-  onSaveCards: (cards: GameCard[]) => void;
+  onSaveCards: (cards: GameCard[], customBoardImage?: string) => void;
+  customBoardImage?: string;  // 커스텀 모드용 배경 이미지 URL
 }
 
 // 확장된 카드 타입 (역량명 포함)
@@ -54,10 +55,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onClose,
   gameMode,
   customCards,
-  onSaveCards
+  onSaveCards,
+  customBoardImage: initialBoardImage
 }) => {
   // 현재 모드에 맞는 기본 카드 가져오기 (보드 순서대로 정렬)
   const getDefaultCards = (): ExtendedGameCard[] => {
+    // Custom 모드는 빈 카드 리스트로 시작 (JSON 업로드 또는 개별 추가)
+    if (gameMode === GameVersion.Custom) {
+      // 22개의 빈 커스텀 카드 생성
+      const customEmptyCards: ExtendedGameCard[] = [];
+      const citySquares = BOARD_SQUARES.filter(s => s.type === SquareType.City);
+      citySquares.forEach((square, idx) => {
+        customEmptyCards.push({
+          id: `custom-${idx + 1}`,
+          type: 'Custom',
+          title: `카드 ${idx + 1}`,
+          situation: '상황을 입력하세요...',
+          choices: [
+            { id: 'A', text: '선택지 A' },
+            { id: 'B', text: '선택지 B' },
+            { id: 'C', text: '선택지 C' }
+          ],
+          learningPoint: '학습 포인트를 입력하세요...',
+          competencyNameKo: `카드 ${idx + 1}`,
+          competencyNameEn: `Card ${idx + 1}`,
+          boardIndex: square.index
+        });
+      });
+      // 이벤트 카드도 추가
+      const eventCards: ExtendedGameCard[] = EVENT_CARDS.map(card => ({
+        ...card,
+        competencyNameKo: '',
+        competencyNameEn: ''
+      }));
+      return [...customEmptyCards, ...eventCards];
+    }
+
     let modeCards: GameCard[];
     let modeType: 'CoreValue' | 'Communication' | 'NewEmployee';
 
@@ -172,6 +205,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState('');
 
+  // 커스텀 모드용 배경 이미지
+  const [boardImage, setBoardImage] = useState(initialBoardImage || '');
+
   // 초기화: 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
   useEffect(() => {
     if (customCards && customCards.length > 0) {
@@ -229,7 +265,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleSaveAll = async () => {
     setSaveStatus('saving');
     try {
-      await onSaveCards(cards as GameCard[]);
+      await onSaveCards(cards as GameCard[], boardImage || undefined);
       setSaveStatus('saved');
       setHasChanges(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -537,6 +573,43 @@ JSON만 응답하세요.`;
               <X className="w-6 h-6" />
             </button>
           </div>
+        </div>
+
+        {/* 게임판 배경 이미지 설정 (모든 모드에서 사용 가능) */}
+        <div className="p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-bold text-purple-700 mb-1">
+                🖼️ 게임판 배경 이미지 URL (선택사항 - 비워두면 기본 이미지 사용)
+              </label>
+              <input
+                type="text"
+                value={boardImage}
+                onChange={(e) => {
+                  setBoardImage(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="https://example.com/background.png"
+                className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              />
+            </div>
+            {boardImage && (
+              <div className="shrink-0">
+                <div className="text-xs text-gray-500 mb-1">미리보기</div>
+                <img
+                  src={boardImage}
+                  alt="배경 미리보기"
+                  className="w-24 h-24 object-cover rounded-lg border-2 border-purple-300"
+                  onError={(e) => {
+                    e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" x="20" fill="red">Error</text></svg>';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-purple-600 mt-2">
+            이미지 URL을 입력하면 게임판 중앙에 배경으로 표시됩니다. (권장 크기: 800x800px)
+          </p>
         </div>
 
         {/* 툴바 */}

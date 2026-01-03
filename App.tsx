@@ -761,15 +761,20 @@ const App: React.FC = () => {
     }));
   };
 
-  // 세션에 커스텀 카드 저장 (세션별 맞춤형 카드)
-  const updateCustomCardsInSession = async (cards: GameCard[]) => {
+  // 세션에 커스텀 카드 및 배경 이미지 저장 (세션별 맞춤형 카드)
+  const updateCustomCardsInSession = async (cards: GameCard[], customBoardImage?: string) => {
     if (!currentSessionId) return;
+
+    const updateData: { customCards: GameCard[]; customBoardImage?: string } = { customCards: cards };
+    if (customBoardImage !== undefined) {
+      updateData.customBoardImage = customBoardImage;
+    }
 
     // Firebase에 저장 (설정되어 있으면)
     const isFirebaseConfigured = import.meta.env.VITE_FIREBASE_PROJECT_ID;
     if (isFirebaseConfigured) {
       try {
-        await firestoreService.updateSession(currentSessionId, { customCards: cards });
+        await firestoreService.updateSession(currentSessionId, updateData);
       } catch (error) {
         console.error('Firebase 커스텀 카드 업데이트 실패:', error);
       }
@@ -777,7 +782,7 @@ const App: React.FC = () => {
 
     setSessions(prev => prev.map(s => {
       if (s.id === currentSessionId) {
-        return { ...s, customCards: cards };
+        return { ...s, ...updateData };
       }
       return s;
     }));
@@ -2445,6 +2450,8 @@ const App: React.FC = () => {
               teams={teams}
               onSquareClick={handleBoardSquareClick}
               gameMode={currentSession?.version || 'Leadership Simulation'}
+              customBoardImage={currentSession?.customBoardImage}
+              customCards={sessionCustomCards}
             />
           </div>
           <div className="lg:col-span-3 order-3 h-full min-h-0 overflow-y-auto">
@@ -2670,8 +2677,9 @@ const App: React.FC = () => {
         onClose={() => setShowAdminDashboard(false)}
         gameMode={currentSession?.version || GameVersion.CoreValue}
         customCards={sessionCustomCards}
-        onSaveCards={(cards) => {
-          updateCustomCardsInSession(cards);
+        customBoardImage={currentSession?.customBoardImage}
+        onSaveCards={(cards, customBoardImage) => {
+          updateCustomCardsInSession(cards, customBoardImage);
         }}
       />
 
