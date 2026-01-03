@@ -126,6 +126,11 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
   };
 
   const getCompetencyName = () => {
+    // 카드가 있으면 카드 제목 우선 사용 (커스텀 모드 지원)
+    if (card?.title) {
+      return card.title;
+    }
+    // 카드가 없으면 칸 이름 사용
     if (square?.name) {
       // 이름에서 한글 부분만 추출
       const match = square.name.match(/^([^(]+)/);
@@ -135,9 +140,17 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
   };
 
   const getTypeLabel = () => {
-    // 역량카드(City)인 경우
-    if (card && square?.type === SquareType.City) {
-      return `${card.type} COMPETENCY`;
+    // 카드가 있으면 카드 타입에 따른 라벨
+    if (card) {
+      if (card.type === 'Custom') return 'CUSTOM CARD';
+      if (card.type === 'Event') return 'EVENT CARD';
+      if (card.type === 'Burnout') return 'BURNOUT CARD';
+      if (card.type === 'Growth') return 'GROWTH CARD';
+      if (card.type === 'Challenge') return 'CHALLENGE CARD';
+      // 역량카드(City)인 경우
+      if (square?.type === SquareType.City) {
+        return `${card.type || 'COREVALUE'} COMPETENCY`;
+      }
     }
     // 특수 칸인 경우
     return getSquareTypeLabel();
