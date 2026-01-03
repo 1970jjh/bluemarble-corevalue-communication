@@ -96,14 +96,22 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
   };
 
   const getTypeIcon = () => {
-    // 역량카드(City)인 경우 카드 타입에 따른 아이콘
-    if (card && square?.type === SquareType.City) {
+    // 카드가 있으면 카드 타입에 따른 아이콘
+    if (card) {
       switch (card.type) {
         case 'Self': return <User size={48} />;
         case 'Team': return <Users size={48} />;
         case 'Leader': return <Target size={48} />;
         case 'Follower': return <Lightbulb size={48} />;
-        default: return <Sparkles size={48} />;
+        case 'Event': return <Zap size={48} />;
+        case 'Burnout': return <Flame size={48} />;
+        case 'Challenge': return <Rocket size={48} />;
+        case 'Growth': return <TrendingUp size={48} />;
+        case 'Custom': return <Sparkles size={48} />;
+        default:
+          // 커스텀 모드 카드인 경우 (boardIndex가 있으면)
+          if (card.boardIndex !== undefined) return <Sparkles size={48} />;
+          return <Sparkles size={48} />;
       }
     }
     // 특수 칸인 경우 칸 타입에 따른 아이콘
@@ -111,14 +119,23 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
   };
 
   const getTypeColor = () => {
-    // 역량카드(City)인 경우 카드 타입에 따른 색상
-    if (card && square?.type === SquareType.City) {
+    // 카드가 있으면 카드 타입에 따른 색상
+    if (card) {
       switch (card.type) {
         case 'Self': return 'from-blue-600 to-blue-900';
         case 'Team': return 'from-green-600 to-green-900';
         case 'Leader': return 'from-red-600 to-red-900';
         case 'Follower': return 'from-orange-600 to-orange-900';
-        default: return 'from-purple-600 to-purple-900';
+        case 'Event': return 'from-yellow-500 to-yellow-700';
+        case 'Burnout': return 'from-red-600 to-red-900';
+        case 'Challenge': return 'from-indigo-600 to-indigo-900';
+        case 'Growth': return 'from-emerald-500 to-emerald-700';
+        case 'Custom': return 'from-purple-600 to-purple-900';
+        case 'CoreValue': return 'from-purple-600 to-purple-900';
+        default:
+          // 커스텀 모드 카드인 경우
+          if (card.boardIndex !== undefined) return 'from-purple-600 to-purple-900';
+          return 'from-purple-600 to-purple-900';
       }
     }
     // 특수 칸인 경우 칸 타입에 따른 색상
@@ -147,9 +164,16 @@ const CompetencyCardPreview: React.FC<CompetencyCardPreviewProps> = ({
       if (card.type === 'Burnout') return 'BURNOUT CARD';
       if (card.type === 'Growth') return 'GROWTH CARD';
       if (card.type === 'Challenge') return 'CHALLENGE CARD';
-      // 역량카드(City)인 경우
+      if (card.type === 'CoreValue') return 'COREVALUE COMPETENCY';
+      if (card.type === 'Self') return 'SELF LEADERSHIP';
+      if (card.type === 'Team') return 'TEAM COLLABORATION';
+      if (card.type === 'Leader') return 'LEADERSHIP';
+      if (card.type === 'Follower') return 'FOLLOWERSHIP';
+      // 커스텀 모드에서 boardIndex가 있으면 커스텀 카드
+      if (card.boardIndex !== undefined) return 'CUSTOM SCENARIO';
+      // 기타 역량카드(City)인 경우
       if (square?.type === SquareType.City) {
-        return `${card.type || 'COREVALUE'} COMPETENCY`;
+        return card.type ? `${card.type} COMPETENCY` : 'SITUATION CARD';
       }
     }
     // 특수 칸인 경우
