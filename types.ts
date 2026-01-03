@@ -99,11 +99,12 @@ export enum TeamColor {
   Rose = 'Rose'
 }
 
-// 3가지 게임 모드
+// 4가지 게임 모드
 export enum GameVersion {
   CoreValue = '핵심가치',
   Communication = '소통&갈등관리',
-  NewEmployee = '신입직원 직장생활'
+  NewEmployee = '신입직원 직장생활',
+  Custom = '커스텀'
 }
 
 export enum SquareType {
@@ -178,6 +179,7 @@ export type CardType =
   | 'CoreValue'      // 핵심가치 모드 카드
   | 'Communication'  // 소통&갈등관리 모드 카드
   | 'NewEmployee'    // 신입직원 직장생활 모드 카드
+  | 'Custom'         // 커스텀 모드 카드
   | 'Event'          // 우연한 기회 이벤트
   | 'Challenge'      // 도전 과제
   | 'Burnout'        // 번아웃
@@ -227,6 +229,7 @@ export interface Session {
   createdAt: number;
   teams: Team[]; // Snapshot of teams in this session
   customCards?: GameCard[];  // 관리자가 수정한 커스텀 카드 (optional)
+  customBoardImage?: string;  // 커스텀 모드용 게임판 배경 이미지 URL (optional)
 }
 
 // ============================================================

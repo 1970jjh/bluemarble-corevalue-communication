@@ -5,17 +5,20 @@ import {
   CORE_VALUE_BOARD_NAMES,
   COMMUNICATION_BOARD_NAMES,
   NEW_EMPLOYEE_BOARD_NAMES,
+  CUSTOM_BOARD_NAMES,
   CORE_VALUE_CARDS,
   COMMUNICATION_CARDS,
   NEW_EMPLOYEE_CARDS,
   getCompetencyForSquare
 } from '../constants';
-import { BoardSquare, SquareType, Team, TeamColor, GameVersion } from '../types';
+import { BoardSquare, SquareType, Team, TeamColor, GameVersion, GameCard } from '../types';
 
 interface GameBoardProps {
   teams: Team[];
   onSquareClick: (index: number) => void;
   gameMode: string;
+  customBoardImage?: string;  // 커스텀 모드용 배경 이미지 URL
+  customCards?: GameCard[];   // 커스텀 카드 (보드 이름 표시용)
 }
 
 // 팀별 캐릭터 이미지 (8개)
@@ -30,7 +33,7 @@ const CHARACTER_IMAGES = [
   'https://i.ibb.co/kgqKfW7Q/8.png',  // 8조
 ];
 
-const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode, customBoardImage, customCards }) => {
   // 팀 번호에 해당하는 캐릭터 이미지 가져오기 (9조 이상은 순환)
   const getCharacterImage = (teamNumber: number): string => {
     const index = (teamNumber - 1) % CHARACTER_IMAGES.length;
@@ -42,6 +45,17 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
     // 역량 칸이 아니면 기본 이름 사용
     if (square.type !== SquareType.City) {
       return square.name.split('(')[0];
+    }
+
+    // 커스텀 모드: customCards에서 해당 보드 인덱스의 카드 제목 가져오기
+    if (gameMode === GameVersion.Custom || gameMode === '커스텀') {
+      if (customCards && customCards.length > 0) {
+        const customCard = customCards.find((c: any) => c.boardIndex === square.index);
+        if (customCard) {
+          return customCard.title || CUSTOM_BOARD_NAMES[square.index] || `카드 ${square.index}`;
+        }
+      }
+      return CUSTOM_BOARD_NAMES[square.index] || `카드 ${square.index}`;
     }
 
     // 모드별 이름 매핑 사용
@@ -122,15 +136,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
     }
   };
 
-  // 모드별 배경 이미지
-  const bgImages: Record<string, string> = {
+  // 모드별 기본 배경 이미지
+  const defaultBgImages: Record<string, string> = {
     [GameVersion.CoreValue]: 'https://i.ibb.co/YF5PkBKv/Infographic-5.png',           // 핵심가치
     [GameVersion.Communication]: 'https://i.ibb.co/hxvfdNgW/Infographic-6.png',       // 소통&갈등관리
     [GameVersion.NewEmployee]: 'https://i.ibb.co/QvXK8zqD/Infographic-7.png',         // 신입사원 직장생활
+    [GameVersion.Custom]: 'https://i.ibb.co/YF5PkBKv/Infographic-5.png',              // 커스텀 (기본값)
   };
 
-  // 현재 게임 모드에 맞는 배경 이미지 선택
-  const currentBgImage = bgImages[gameMode] || bgImages[GameVersion.CoreValue];
+  // 현재 게임 모드에 맞는 배경 이미지 선택 (커스텀 이미지 우선)
+  const currentBgImage = customBoardImage || defaultBgImages[gameMode] || defaultBgImages[GameVersion.CoreValue];
 
   return (
     <div className="flex flex-col items-center gap-4">

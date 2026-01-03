@@ -39,7 +39,8 @@ interface AdminDashboardProps {
   onClose: () => void;
   gameMode: GameVersion;
   customCards: GameCard[];
-  onSaveCards: (cards: GameCard[]) => void;
+  onSaveCards: (cards: GameCard[], customBoardImage?: string) => void;
+  customBoardImage?: string;  // 커스텀 모드용 배경 이미지 URL
 }
 
 // 확장된 카드 타입 (역량명 포함)
@@ -54,10 +55,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onClose,
   gameMode,
   customCards,
-  onSaveCards
+  onSaveCards,
+  customBoardImage: initialBoardImage
 }) => {
   // 현재 모드에 맞는 기본 카드 가져오기 (보드 순서대로 정렬)
   const getDefaultCards = (): ExtendedGameCard[] => {
+    // Custom 모드는 빈 카드 리스트로 시작 (JSON 업로드 또는 개별 추가)
+    if (gameMode === GameVersion.Custom) {
+      // 22개의 빈 커스텀 카드 생성
+      const customEmptyCards: ExtendedGameCard[] = [];
+      const citySquares = BOARD_SQUARES.filter(s => s.type === SquareType.City);
+      citySquares.forEach((square, idx) => {
+        customEmptyCards.push({
+          id: `custom-${idx + 1}`,
+          type: 'Custom',
+          title: `카드 ${idx + 1}`,
+          situation: '상황을 입력하세요...',
+          choices: [
+            { id: 'A', text: '선택지 A' },
+            { id: 'B', text: '선택지 B' },
+            { id: 'C', text: '선택지 C' }
+          ],
+          learningPoint: '학습 포인트를 입력하세요...',
+          competencyNameKo: `카드 ${idx + 1}`,
+          competencyNameEn: `Card ${idx + 1}`,
+          boardIndex: square.index
+        });
+      });
+      // 이벤트 카드도 추가
+      const eventCards: ExtendedGameCard[] = EVENT_CARDS.map(card => ({
+        ...card,
+        competencyNameKo: '',
+        competencyNameEn: ''
+      }));
+      return [...customEmptyCards, ...eventCards];
+    }
+
     let modeCards: GameCard[];
     let modeType: 'CoreValue' | 'Communication' | 'NewEmployee';
 
@@ -172,6 +205,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState('');
 
+  // 커스텀 모드용 배경 이미지
+  const [boardImage, setBoardImage] = useState(initialBoardImage || '');
+
   // 초기화: 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
   useEffect(() => {
     if (customCards && customCards.length > 0) {
@@ -229,7 +265,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleSaveAll = async () => {
     setSaveStatus('saving');
     try {
-      await onSaveCards(cards as GameCard[]);
+      await onSaveCards(cards as GameCard[], boardImage || undefined);
       setSaveStatus('saved');
       setHasChanges(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -249,12 +285,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // JSON 내보내기 (다운로드)
   const handleExportJSON = () => {
-    // 역량 카드만 내보내기 (이벤트 카드 제외)
-    const competencyCards = cards.filter(card => card.competency);
+    // 커스텀 모드: 모든 카드 내보내기 (이벤트 카드 포함, 총 31개)
+    // 다른 모드: 역량 카드만 내보내기 (이벤트 카드 제외)
+    const cardsToExport = gameMode === GameVersion.Custom
+      ? cards
+      : cards.filter(card => card.competency);
 
     // 내보내기용 간소화된 형식으로 변환
-    const exportData = competencyCards.map(card => ({
+    const exportData = cardsToExport.map(card => ({
       id: card.id,
+      type: card.type,  // 커스텀 모드에서 이벤트 카드 구분용
       competency: card.competency,
       competencyNameKo: card.competencyNameKo || '',
       competencyNameEn: card.competencyNameEn || '',
@@ -272,7 +312,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const link = document.createElement('a');
     link.href = url;
     const modePrefix = gameMode === GameVersion.CoreValue ? 'corevalue' :
-                       gameMode === GameVersion.Communication ? 'communication' : 'newemployee';
+                       gameMode === GameVersion.Communication ? 'communication' :
+                       gameMode === GameVersion.NewEmployee ? 'newemployee' : 'custom';
     link.download = `${modePrefix}_cards_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
@@ -329,7 +370,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           const existingCard = cards.find(c => c.id === card.id);
           validatedCards.push({
             id: card.id,
-            type: existingCard?.type || 'CoreValue',
+            type: card.type || existingCard?.type || 'CoreValue',
             competency: card.competency || existingCard?.competency,
             competencyNameKo: card.competencyNameKo || '',
             competencyNameEn: card.competencyNameEn || '',
@@ -351,26 +392,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           return;
         }
 
-        // 기존 카드와 병합 (가져온 카드로 덮어쓰기)
-        const updatedCards = cards.map(existingCard => {
-          const importedCard = validatedCards.find(c => c.id === existingCard.id);
-          if (importedCard) {
-            return { ...existingCard, ...importedCard };
-          }
-          return existingCard;
-        });
-
-        // 새로운 카드 추가 (기존에 없던 id)
-        validatedCards.forEach(importedCard => {
-          if (!cards.find(c => c.id === importedCard.id)) {
-            updatedCards.push(importedCard);
-          }
-        });
+        // 커스텀 모드: 모든 카드 완전 덮어쓰기 (이벤트 카드 포함)
+        // 다른 모드: 기존 이벤트 카드는 유지하고, 역량 카드만 덮어쓰기
+        let updatedCards: ExtendedGameCard[];
+        if (gameMode === GameVersion.Custom) {
+          // 커스텀 모드에서는 가져온 카드로 완전히 대체
+          updatedCards = validatedCards;
+        } else {
+          // 다른 모드에서는 이벤트 카드 유지
+          const eventCards = cards.filter(c => c.type === 'Event' || !c.boardIndex);
+          updatedCards = [...validatedCards, ...eventCards];
+        }
 
         setCards(updatedCards);
         setHasChanges(true);
         setImportStatus('success');
-        setImportMessage(`${validatedCards.length}개 카드를 성공적으로 가져왔습니다.`);
+        const importModeMessage = gameMode === GameVersion.Custom
+          ? `${validatedCards.length}개 카드를 성공적으로 가져왔습니다. (모든 카드 덮어쓰기)`
+          : `${validatedCards.length}개 카드를 성공적으로 가져왔습니다. (역량 카드 덮어쓰기)`;
+        setImportMessage(importModeMessage);
         setTimeout(() => setImportStatus('idle'), 3000);
 
       } catch (error) {
@@ -526,7 +566,9 @@ JSON만 응답하세요.`;
               <div>
                 <h2 className="text-2xl font-bold">관리자 대시보드</h2>
                 <p className="text-indigo-200 text-sm">
-                  {gameMode === GameVersion.CoreValue ? '핵심가치' : gameMode === GameVersion.Communication ? '소통&갈등관리' : '신입직원 직장생활'} 모드 카드 관리
+                  {gameMode === GameVersion.CoreValue ? '핵심가치' :
+                   gameMode === GameVersion.Communication ? '소통&갈등관리' :
+                   gameMode === GameVersion.NewEmployee ? '신입직원 직장생활' : '커스텀'} 모드 카드 관리
                 </p>
               </div>
             </div>
@@ -537,6 +579,43 @@ JSON만 응답하세요.`;
               <X className="w-6 h-6" />
             </button>
           </div>
+        </div>
+
+        {/* 게임판 배경 이미지 설정 (모든 모드에서 사용 가능) */}
+        <div className="p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-bold text-purple-700 mb-1">
+                🖼️ 게임판 배경 이미지 URL (선택사항 - 비워두면 기본 이미지 사용)
+              </label>
+              <input
+                type="text"
+                value={boardImage}
+                onChange={(e) => {
+                  setBoardImage(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="https://example.com/background.png"
+                className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              />
+            </div>
+            {boardImage && (
+              <div className="shrink-0">
+                <div className="text-xs text-gray-500 mb-1">미리보기</div>
+                <img
+                  src={boardImage}
+                  alt="배경 미리보기"
+                  className="w-24 h-24 object-cover rounded-lg border-2 border-purple-300"
+                  onError={(e) => {
+                    e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" x="20" fill="red">Error</text></svg>';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-purple-600 mt-2">
+            이미지 URL을 입력하면 게임판 중앙에 배경으로 표시됩니다. (권장 크기: 800x800px)
+          </p>
         </div>
 
         {/* 툴바 */}
@@ -655,6 +734,11 @@ JSON만 응답하세요.`;
         <div className="flex-1 overflow-y-auto p-4">
           <div className="text-sm text-gray-500 mb-4">
             총 {filteredCards.length}개 카드 (역량 카드 22개 + 이벤트 카드 9개)
+            {gameMode === GameVersion.Custom && (
+              <span className="ml-2 text-purple-600 font-medium">
+                ※ 커스텀 모드: 모든 카드 수정 가능
+              </span>
+            )}
           </div>
 
           <div className="space-y-3">
