@@ -387,26 +387,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           return;
         }
 
-        // 기존 카드와 병합 (가져온 카드로 덮어쓰기)
-        const updatedCards = cards.map(existingCard => {
-          const importedCard = validatedCards.find(c => c.id === existingCard.id);
-          if (importedCard) {
-            return { ...existingCard, ...importedCard };
-          }
-          return existingCard;
-        });
-
-        // 새로운 카드 추가 (기존에 없던 id)
-        validatedCards.forEach(importedCard => {
-          if (!cards.find(c => c.id === importedCard.id)) {
-            updatedCards.push(importedCard);
-          }
-        });
+        // 기존 이벤트 카드는 유지하고, 가져온 카드로 완전히 대체 (덮어쓰기)
+        const eventCards = cards.filter(c => c.type === 'Event' || !c.boardIndex);
+        const updatedCards = [...validatedCards, ...eventCards];
 
         setCards(updatedCards);
         setHasChanges(true);
         setImportStatus('success');
-        setImportMessage(`${validatedCards.length}개 카드를 성공적으로 가져왔습니다.`);
+        setImportMessage(`${validatedCards.length}개 카드를 성공적으로 가져왔습니다. (기존 카드 덮어쓰기)`);
         setTimeout(() => setImportStatus('idle'), 3000);
 
       } catch (error) {
