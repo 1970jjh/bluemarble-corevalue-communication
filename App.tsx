@@ -1071,11 +1071,18 @@ const App: React.FC = () => {
     let selectedCard: GameCard | null = null;
 
     if (square.type === SquareType.City) {
-      // 역량(competency)에 맞는 카드 선택 - 모드별 매핑 사용
-      const targetCompetency = getCompetencyForSquare(square.index, sessionCardType);
-      const exactCard = allCards.find(c => c.competency === targetCompetency);
-      selectedCard = exactCard || modeCards[0];
-      console.log(`[Card Selection] Square: ${square.index}, Mode: ${sessionCardType}, Target: ${targetCompetency}, Found: ${exactCard?.title || 'fallback'}`);
+      // 커스텀 모드: boardIndex로 카드 찾기
+      if (currentSession?.version === GameVersion.Custom && sessionCards.length > 0) {
+        const customCard = sessionCards.find((c: any) => c.boardIndex === square.index);
+        selectedCard = customCard || sessionCards[0];
+        console.log(`[Card Selection] Custom Mode - Square: ${square.index}, Found: ${customCard?.title || 'fallback'}`);
+      } else {
+        // 일반 모드: 역량(competency)에 맞는 카드 선택
+        const targetCompetency = getCompetencyForSquare(square.index, sessionCardType);
+        const exactCard = allCards.find(c => c.competency === targetCompetency);
+        selectedCard = exactCard || modeCards[0];
+        console.log(`[Card Selection] Square: ${square.index}, Mode: ${sessionCardType}, Target: ${targetCompetency}, Found: ${exactCard?.title || 'fallback'}`);
+      }
     }
     else if (square.type === SquareType.GoldenKey) {
       // 찬스카드 타입 확인 (1/3/5 → lottery, 2/4 → risk)
@@ -1096,32 +1103,43 @@ const App: React.FC = () => {
       }
 
       // 우연한 기회 - Event 카드 중 랜덤
-      const eventCards = EVENT_CARDS.filter(c => c.type === 'Event');
-      selectedCard = eventCards.length > 0
-        ? eventCards[Math.floor(Math.random() * eventCards.length)]
+      // 커스텀 모드: customCards에서 Event 타입 카드 사용
+      const eventCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+        ? sessionCards.filter((c: any) => c.type === 'Event')
+        : EVENT_CARDS.filter(c => c.type === 'Event');
+      selectedCard = eventCardPool.length > 0
+        ? eventCardPool[Math.floor(Math.random() * eventCardPool.length)]
         : EVENT_CARDS[0];
     }
     else if (square.type === SquareType.Fund) {
       // 성장 기회 - Growth 카드
-      const growthCard = EVENT_CARDS.find(c => c.type === 'Growth');
-      selectedCard = growthCard || EVENT_CARDS[0];
+      const growthCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+        ? sessionCards.filter((c: any) => c.type === 'Growth')
+        : EVENT_CARDS.filter(c => c.type === 'Growth');
+      selectedCard = growthCardPool[0] || EVENT_CARDS.find(c => c.type === 'Growth') || EVENT_CARDS[0];
     }
     else if (square.type === SquareType.Space) {
       // 도전 과제 - Challenge 카드
-      const challengeCard = EVENT_CARDS.find(c => c.type === 'Challenge');
-      selectedCard = challengeCard || EVENT_CARDS[0];
+      const challengeCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+        ? sessionCards.filter((c: any) => c.type === 'Challenge')
+        : EVENT_CARDS.filter(c => c.type === 'Challenge');
+      selectedCard = challengeCardPool[0] || EVENT_CARDS.find(c => c.type === 'Challenge') || EVENT_CARDS[0];
     }
     else if (square.type === SquareType.WorldTour) {
       // 특별 이벤트 - Event 카드 중 랜덤
-      const eventCards = EVENT_CARDS.filter(c => c.type === 'Event');
-      selectedCard = eventCards.length > 0
-        ? eventCards[Math.floor(Math.random() * eventCards.length)]
+      const worldTourCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+        ? sessionCards.filter((c: any) => c.type === 'Event')
+        : EVENT_CARDS.filter(c => c.type === 'Event');
+      selectedCard = worldTourCardPool.length > 0
+        ? worldTourCardPool[Math.floor(Math.random() * worldTourCardPool.length)]
         : EVENT_CARDS[0];
     }
     else if (square.type === SquareType.Island) {
       // 번아웃 - Burnout 카드
-      const burnoutCard = EVENT_CARDS.find(c => c.type === 'Burnout');
-      selectedCard = burnoutCard || EVENT_CARDS[0];
+      const burnoutCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+        ? sessionCards.filter((c: any) => c.type === 'Burnout')
+        : EVENT_CARDS.filter(c => c.type === 'Burnout');
+      selectedCard = burnoutCardPool[0] || EVENT_CARDS.find(c => c.type === 'Burnout') || EVENT_CARDS[0];
     }
     else if (square.type === SquareType.Start) {
       updateTeamResources(team.id, { capital: 50 });
@@ -1903,11 +1921,16 @@ const App: React.FC = () => {
 
     switch (square.type) {
       case SquareType.City:
-        // 역량(competency)에 맞는 카드 선택 - 모드별 매핑 사용
-        const targetPreviewCompetency = getCompetencyForSquare(index, sessionCardType);
-        cardToPreview = allCards.find(c => c.competency === targetPreviewCompetency);
-        if (!cardToPreview) {
-          cardToPreview = modeCards.find(c => c.competency === targetPreviewCompetency);
+        // 커스텀 모드: boardIndex로 카드 찾기
+        if (currentSession?.version === GameVersion.Custom && sessionCards.length > 0) {
+          cardToPreview = sessionCards.find((c: any) => c.boardIndex === index);
+        } else {
+          // 일반 모드: 역량(competency)에 맞는 카드 선택
+          const targetPreviewCompetency = getCompetencyForSquare(index, sessionCardType);
+          cardToPreview = allCards.find(c => c.competency === targetPreviewCompetency);
+          if (!cardToPreview) {
+            cardToPreview = modeCards.find(c => c.competency === targetPreviewCompetency);
+          }
         }
         break;
       case SquareType.GoldenKey:
