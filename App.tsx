@@ -1103,8 +1103,8 @@ const App: React.FC = () => {
       }
 
       // 우연한 기회 - Event 카드 중 랜덤
-      // 커스텀 모드: customCards에서 Event 타입 카드 사용
-      const eventCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+      // 세션에 customCards가 있으면 사용 (모든 모드에서 세션별 카드 수정 반영)
+      const eventCardPool = sessionCards.length > 0
         ? sessionCards.filter((c: any) => c.type === 'Event')
         : EVENT_CARDS.filter(c => c.type === 'Event');
       selectedCard = eventCardPool.length > 0
@@ -1113,21 +1113,21 @@ const App: React.FC = () => {
     }
     else if (square.type === SquareType.Fund) {
       // 성장 기회 - Growth 카드
-      const growthCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+      const growthCardPool = sessionCards.length > 0
         ? sessionCards.filter((c: any) => c.type === 'Growth')
         : EVENT_CARDS.filter(c => c.type === 'Growth');
       selectedCard = growthCardPool[0] || EVENT_CARDS.find(c => c.type === 'Growth') || EVENT_CARDS[0];
     }
     else if (square.type === SquareType.Space) {
       // 도전 과제 - Challenge 카드
-      const challengeCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+      const challengeCardPool = sessionCards.length > 0
         ? sessionCards.filter((c: any) => c.type === 'Challenge')
         : EVENT_CARDS.filter(c => c.type === 'Challenge');
       selectedCard = challengeCardPool[0] || EVENT_CARDS.find(c => c.type === 'Challenge') || EVENT_CARDS[0];
     }
     else if (square.type === SquareType.WorldTour) {
       // 특별 이벤트 - Event 카드 중 랜덤
-      const worldTourCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+      const worldTourCardPool = sessionCards.length > 0
         ? sessionCards.filter((c: any) => c.type === 'Event')
         : EVENT_CARDS.filter(c => c.type === 'Event');
       selectedCard = worldTourCardPool.length > 0
@@ -1136,7 +1136,7 @@ const App: React.FC = () => {
     }
     else if (square.type === SquareType.Island) {
       // 번아웃 - Burnout 카드
-      const burnoutCardPool = (currentSession?.version === GameVersion.Custom && sessionCards.length > 0)
+      const burnoutCardPool = sessionCards.length > 0
         ? sessionCards.filter((c: any) => c.type === 'Burnout')
         : EVENT_CARDS.filter(c => c.type === 'Burnout');
       selectedCard = burnoutCardPool[0] || EVENT_CARDS.find(c => c.type === 'Burnout') || EVENT_CARDS[0];
