@@ -2826,6 +2826,7 @@ const App: React.FC = () => {
         gameMode={currentSession?.version || GameVersion.CoreValue}
         customCards={sessionCustomCards}
         customBoardImage={currentSession?.customBoardImage}
+        sessionId={currentSessionId || undefined}
         onSaveCards={(cards, customBoardImage) => {
           updateCustomCardsInSession(cards, customBoardImage);
         }}

@@ -31,8 +31,11 @@ import {
   Wand2,
   Download,
   Upload,
-  FileJson
+  FileJson,
+  ImagePlus,
+  Loader2
 } from 'lucide-react';
+import { uploadBoardImage } from '../lib/storage';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -41,6 +44,7 @@ interface AdminDashboardProps {
   customCards: GameCard[];
   onSaveCards: (cards: GameCard[], customBoardImage?: string) => void;
   customBoardImage?: string;  // 커스텀 모드용 배경 이미지 URL
+  sessionId?: string;  // 세션 ID (이미지 업로드 경로용)
 }
 
 // 확장된 카드 타입 (역량명 포함)
@@ -56,7 +60,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   gameMode,
   customCards,
   onSaveCards,
-  customBoardImage: initialBoardImage
+  customBoardImage: initialBoardImage,
+  sessionId
 }) => {
   // 현재 모드에 맞는 기본 카드 가져오기 (보드 순서대로 정렬)
   const getDefaultCards = (): ExtendedGameCard[] => {
@@ -208,6 +213,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // 커스텀 모드용 배경 이미지
   const [boardImage, setBoardImage] = useState(initialBoardImage || '');
 
+  // 이미지 파일 업로드 관련
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // 초기화: 커스텀 카드가 있으면 사용, 없으면 기본 카드 사용
   useEffect(() => {
     if (customCards && customCards.length > 0) {
@@ -280,6 +290,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (confirm('모든 변경사항이 초기화됩니다. 계속하시겠습니까?')) {
       setCards(getDefaultCards());
       setHasChanges(true);
+    }
+  };
+
+  // 이미지 파일 업로드 핸들러
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 파일 크기 검증 (3MB)
+    const maxSize = 3 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setUploadError('파일 크기가 너무 큽니다. 최대 3MB까지 업로드 가능합니다.');
+      return;
+    }
+
+    // 파일 타입 검증
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('지원하지 않는 파일 형식입니다. JPG, PNG, GIF, WebP만 가능합니다.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      // sessionId가 없으면 임시 ID 생성
+      const uploadSessionId = sessionId || `temp_${Date.now()}`;
+      const result = await uploadBoardImage(file, uploadSessionId);
+
+      if (result.success && result.url) {
+        setBoardImage(result.url);
+        setHasChanges(true);
+        setUploadError(null);
+      } else {
+        setUploadError(result.error || '업로드에 실패했습니다.');
+      }
+    } catch (error: any) {
+      setUploadError(error.message || '업로드 중 오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+      // 파일 입력 초기화 (같은 파일 재선택 가능하도록)
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
     }
   };
 
@@ -583,21 +638,60 @@ JSON만 응답하세요.`;
 
         {/* 게임판 배경 이미지 설정 (모든 모드에서 사용 가능) */}
         <div className="p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-4">
             <div className="flex-1">
               <label className="block text-sm font-bold text-purple-700 mb-1">
-                🖼️ 게임판 배경 이미지 URL (선택사항 - 비워두면 기본 이미지 사용)
+                🖼️ 게임판 배경 이미지 (선택사항 - 비워두면 기본 이미지 사용)
               </label>
-              <input
-                type="text"
-                value={boardImage}
-                onChange={(e) => {
-                  setBoardImage(e.target.value);
-                  setHasChanges(true);
-                }}
-                placeholder="https://example.com/background.png"
-                className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={boardImage}
+                  onChange={(e) => {
+                    setBoardImage(e.target.value);
+                    setHasChanges(true);
+                    setUploadError(null);
+                  }}
+                  placeholder="https://example.com/background.png"
+                  className="flex-1 px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+                {/* 파일 업로드 버튼 */}
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                />
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed transition-colors font-medium"
+                  title="이미지 파일 업로드 (최대 3MB)"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      업로드 중...
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="w-4 h-4" />
+                      파일 업로드
+                    </>
+                  )}
+                </button>
+              </div>
+              {/* 에러 메시지 */}
+              {uploadError && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {uploadError}
+                </p>
+              )}
+              <p className="text-xs text-purple-600 mt-2">
+                URL을 직접 입력하거나 이미지 파일을 업로드하세요. (JPG, PNG, GIF, WebP / 최대 3MB / 권장 크기: 800x800px)
+              </p>
             </div>
             {boardImage && (
               <div className="shrink-0">
@@ -610,12 +704,19 @@ JSON만 응답하세요.`;
                     e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" x="20" fill="red">Error</text></svg>';
                   }}
                 />
+                {/* 이미지 삭제 버튼 */}
+                <button
+                  onClick={() => {
+                    setBoardImage('');
+                    setHasChanges(true);
+                  }}
+                  className="mt-1 text-xs text-red-500 hover:text-red-700 underline"
+                >
+                  이미지 제거
+                </button>
               </div>
             )}
           </div>
-          <p className="text-xs text-purple-600 mt-2">
-            이미지 URL을 입력하면 게임판 중앙에 배경으로 표시됩니다. (권장 크기: 800x800px)
-          </p>
         </div>
 
         {/* 툴바 */}
