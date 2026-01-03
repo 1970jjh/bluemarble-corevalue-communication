@@ -539,14 +539,16 @@ const CardModal: React.FC<CardModalProps> = ({
                  </div>
                  <div className="text-base leading-relaxed mb-6 space-y-3">
                    {result.feedback.split(/(\*\*\[.+?\]\*\*)/).map((part, idx) => {
-                     // 섹션 헤더 처리 (**[장점]**, **[단점/리스크]**, **[총평]**)
+                     // 섹션 헤더 처리 (**[장점]**, **[리스크]**, **[총평]**, **[모범답안]**)
                      if (part.match(/^\*\*\[.+?\]\*\*$/)) {
                        const label = part.replace(/\*\*/g, '').replace(/[\[\]]/g, '');
                        const colorClass = label.includes('장점')
                          ? 'text-green-700 bg-green-100 border-green-300'
-                         : label.includes('단점') || label.includes('리스크')
+                         : label.includes('리스크')
                            ? 'text-red-700 bg-red-100 border-red-300'
-                           : 'text-blue-700 bg-blue-100 border-blue-300';
+                           : label.includes('모범답안')
+                             ? 'text-purple-700 bg-purple-100 border-purple-300'
+                             : 'text-blue-700 bg-blue-100 border-blue-300';
                        return (
                          <div key={idx} className={`inline-block px-3 py-1 rounded font-black text-sm border-2 mt-2 ${colorClass}`}>
                            {label}

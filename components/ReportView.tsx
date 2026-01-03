@@ -646,7 +646,7 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
 
                                    {h.aiFeedback && (
                                      <div className="mt-3 bg-gradient-to-r from-indigo-50 to-blue-50 p-3 rounded border border-indigo-200">
-                                       <div className="font-bold text-indigo-700 mb-2">🤖 AI 분석 결과 (장점/단점/총평)</div>
+                                       <div className="font-bold text-indigo-700 mb-2">🤖 AI 분석 결과 (장점/리스크/총평/모범답안)</div>
                                        <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{h.aiFeedback}</p>
                                      </div>
                                    )}

@@ -1720,16 +1720,18 @@ const App: React.FC = () => {
 
     try {
       const prompt = `
-        Role: Strict, insightful, financially savvy Leadership Assessor. You are a fair but critical evaluator who identifies both strengths AND weaknesses in every decision.
+        Role: Strict, insightful, and empathetic Career and Life Coach. You are a fair but critical evaluator who analyzes choices from the PROTAGONIST'S PERSPECTIVE in the given situation - not from a manager's or leader's viewpoint. Evaluate how this decision affects the protagonist personally: their growth, well-being, relationships, and career development.
 
         Context:
         - Card Type: "${activeCard.type}"
         - Scenario: "${activeCard.situation}"
         - Learning Point: "${activeCard.learningPoint}"
         ${isOpenEnded
-          ? `- User Open-Ended Answer: "${sharedReasoning}"`
-          : `- User Choice: "${sharedSelectedChoice?.text}" \n- User Reasoning: "${sharedReasoning}"`
+          ? `- Protagonist's Open-Ended Answer: "${sharedReasoning}"`
+          : `- Protagonist's Choice: "${sharedSelectedChoice?.text}" \n- Protagonist's Reasoning: "${sharedReasoning}"`
         }
+
+        IMPORTANT: Analyze from the PROTAGONIST'S perspective - the person facing the situation described. Consider their personal growth, work-life balance, emotional well-being, and career development.
 
         CRITICAL SCORING PRINCIPLES:
         **FIRST: CHECK FOR LOW-EFFORT/INSINCERE RESPONSES**
@@ -1786,17 +1788,18 @@ const App: React.FC = () => {
         - Trade-off principle: Good decisions often sacrifice Resource/Energy for Trust, Competency, or Insight gains.
 
         Feedback Format (in Korean) - USE CLEAR SECTION MARKERS:
-        **[장점]** What was good about the decision (1-2 sentences)
-        **[단점/리스크]** What could go wrong or what trade-offs exist (1-2 sentences)
+        **[장점]** What was good about the decision from the protagonist's perspective (1-2 sentences)
+        **[리스크]** What could go wrong or what trade-offs exist for the protagonist (1-2 sentences)
         **[총평]** Overall assessment and learning point (1 sentence)
+        **[모범답안]** Provide a model answer - what would be the ideal choice and reasoning in this situation? Be specific and actionable. (2-3 sentences)
 
         Output JSON:
-        - feedback: Detailed paragraph with **[장점]**, **[단점/리스크]**, **[총평]** section markers (Korean).
+        - feedback: Detailed paragraph with **[장점]**, **[리스크]**, **[총평]**, **[모범답안]** section markers (Korean).
         - scores: { capital, energy, trust, competency, insight } (integers between -10 and +10)
       `;
 
       const response = await genAI.models.generateContent({
-        model: 'gemini-3-flash-preview', 
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -2081,16 +2084,18 @@ const App: React.FC = () => {
 
     try {
       const prompt = `
-        Role: Strict, insightful, financially savvy Leadership Assessor. You are a fair but critical evaluator who identifies both strengths AND weaknesses in every decision.
+        Role: Strict, insightful, and empathetic Career and Life Coach. You are a fair but critical evaluator who analyzes choices from the PROTAGONIST'S PERSPECTIVE in the given situation - not from a manager's or leader's viewpoint. Evaluate how this decision affects the protagonist personally: their growth, well-being, relationships, and career development.
 
         Context:
         - Card Type: "${previewCard.type}"
         - Scenario: "${previewCard.situation}"
         - Learning Point: "${previewCard.learningPoint}"
         ${isOpenEnded
-          ? `- User Open-Ended Answer: "${previewReasoning}"`
-          : `- User Choice: "${previewSelectedChoice?.text}" \n- User Reasoning: "${previewReasoning}"`
+          ? `- Protagonist's Open-Ended Answer: "${previewReasoning}"`
+          : `- Protagonist's Choice: "${previewSelectedChoice?.text}" \n- Protagonist's Reasoning: "${previewReasoning}"`
         }
+
+        IMPORTANT: Analyze from the PROTAGONIST'S perspective - the person facing the situation described. Consider their personal growth, work-life balance, emotional well-being, and career development.
 
         CRITICAL SCORING PRINCIPLES:
         **FIRST: CHECK FOR LOW-EFFORT/INSINCERE RESPONSES**
@@ -2147,12 +2152,13 @@ const App: React.FC = () => {
         - Trade-off principle: Good decisions often sacrifice Resource/Energy for Trust, Competency, or Insight gains.
 
         Feedback Format (in Korean) - USE CLEAR SECTION MARKERS:
-        **[장점]** What was good about the decision (1-2 sentences)
-        **[단점/리스크]** What could go wrong or what trade-offs exist (1-2 sentences)
+        **[장점]** What was good about the decision from the protagonist's perspective (1-2 sentences)
+        **[리스크]** What could go wrong or what trade-offs exist for the protagonist (1-2 sentences)
         **[총평]** Overall assessment and learning point (1 sentence)
+        **[모범답안]** Provide a model answer - what would be the ideal choice and reasoning in this situation? Be specific and actionable. (2-3 sentences)
 
         Output JSON:
-        - feedback: Detailed paragraph with **[장점]**, **[단점/리스크]**, **[총평]** section markers (Korean).
+        - feedback: Detailed paragraph with **[장점]**, **[리스크]**, **[총평]**, **[모범답안]** section markers (Korean).
         - scores: { capital, energy, trust, competency, insight } (integers between -10 and +10)
       `;
 
@@ -2567,9 +2573,32 @@ const App: React.FC = () => {
           </div>
           <div className="lg:col-span-3 order-3 h-full min-h-0 overflow-y-auto">
             <div className="grid gap-2">
-              {teams.map((team, idx) => (
-                <TeamStatus key={team.id} team={team} active={idx === currentTurnIndex} />
-              ))}
+              {(() => {
+                // 팀별 총점 계산 및 순위 정렬
+                const teamsWithScores = teams.map(t => ({
+                  team: t,
+                  totalScore: t.resources.capital + t.resources.energy + t.resources.trust + t.resources.competency + t.resources.insight
+                }));
+                const sortedByScore = [...teamsWithScores].sort((a, b) => b.totalScore - a.totalScore);
+                const firstPlaceScore = sortedByScore[0]?.totalScore || 0;
+
+                return teams.map((team, idx) => {
+                  const teamScore = team.resources.capital + team.resources.energy + team.resources.trust + team.resources.competency + team.resources.insight;
+                  const rank = sortedByScore.findIndex(t => t.team.id === team.id) + 1;
+                  const gapFrom1st = firstPlaceScore - teamScore;
+
+                  return (
+                    <TeamStatus
+                      key={team.id}
+                      team={team}
+                      active={idx === currentTurnIndex}
+                      rank={rank}
+                      gapFrom1st={gapFrom1st}
+                      totalTeams={teams.length}
+                    />
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>

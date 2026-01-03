@@ -5,9 +5,12 @@ import { Battery, Coins, Star, Handshake, TrendingUp, Lightbulb } from 'lucide-r
 interface TeamStatusProps {
   team: Team;
   active: boolean;
+  rank?: number;
+  gapFrom1st?: number;
+  totalTeams?: number;
 }
 
-const TeamStatus: React.FC<TeamStatusProps> = ({ team, active }) => {
+const TeamStatus: React.FC<TeamStatusProps> = ({ team, active, rank, gapFrom1st, totalTeams }) => {
   const getHeaderColor = (color: TeamColor) => {
     switch (color) {
       case TeamColor.Red: return 'bg-red-600 text-white';
@@ -48,6 +51,9 @@ const TeamStatus: React.FC<TeamStatusProps> = ({ team, active }) => {
     );
   };
 
+  // 팀 총점 계산
+  const totalScore = team.resources.capital + team.resources.energy + team.resources.trust + team.resources.competency + team.resources.insight;
+
   return (
     <div className={`border-2 border-black bg-white transition-all duration-300 ${active ? 'shadow-hard translate-x-[-1px] translate-y-[-1px] ring-2 ring-yellow-400' : 'opacity-90'}`}>
       <div className={`px-2 py-1 border-b-2 border-black ${getHeaderColor(team.color)}`}>
@@ -65,6 +71,30 @@ const TeamStatus: React.FC<TeamStatusProps> = ({ team, active }) => {
           </div>
         )}
       </div>
+
+      {/* 순위 및 1위와의 격차 표시 */}
+      {rank !== undefined && totalTeams !== undefined && (
+        <div className="px-2 py-1.5 bg-gray-100 border-b border-gray-300 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className={`font-black text-lg ${rank === 1 ? 'text-yellow-600' : rank === 2 ? 'text-gray-500' : rank === 3 ? 'text-orange-600' : 'text-gray-700'}`}>
+              {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+            </span>
+            <span className="text-[10px] text-gray-500">/ {totalTeams}팀</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500">총점:</span>
+            <span className="font-bold text-sm">{totalScore}</span>
+            {rank !== 1 && gapFrom1st !== undefined && gapFrom1st !== 0 && (
+              <span className="text-[10px] text-red-500 font-bold">
+                ({gapFrom1st > 0 ? `-${gapFrom1st}` : `+${Math.abs(gapFrom1st)}`})
+              </span>
+            )}
+            {rank === 1 && (
+              <span className="text-[10px] text-green-600 font-bold">1위</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="p-2 space-y-1">
         {/* Resource (Time) Display */}
