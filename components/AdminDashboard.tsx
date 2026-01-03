@@ -285,12 +285,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // JSON 내보내기 (다운로드)
   const handleExportJSON = () => {
-    // 역량 카드만 내보내기 (이벤트 카드 제외)
-    const competencyCards = cards.filter(card => card.competency);
+    // 커스텀 모드: 모든 카드 내보내기 (이벤트 카드 포함, 총 31개)
+    // 다른 모드: 역량 카드만 내보내기 (이벤트 카드 제외)
+    const cardsToExport = gameMode === GameVersion.Custom
+      ? cards
+      : cards.filter(card => card.competency);
 
     // 내보내기용 간소화된 형식으로 변환
-    const exportData = competencyCards.map(card => ({
+    const exportData = cardsToExport.map(card => ({
       id: card.id,
+      type: card.type,  // 커스텀 모드에서 이벤트 카드 구분용
       competency: card.competency,
       competencyNameKo: card.competencyNameKo || '',
       competencyNameEn: card.competencyNameEn || '',
@@ -308,7 +312,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const link = document.createElement('a');
     link.href = url;
     const modePrefix = gameMode === GameVersion.CoreValue ? 'corevalue' :
-                       gameMode === GameVersion.Communication ? 'communication' : 'newemployee';
+                       gameMode === GameVersion.Communication ? 'communication' :
+                       gameMode === GameVersion.NewEmployee ? 'newemployee' : 'custom';
     link.download = `${modePrefix}_cards_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
@@ -365,7 +370,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           const existingCard = cards.find(c => c.id === card.id);
           validatedCards.push({
             id: card.id,
-            type: existingCard?.type || 'CoreValue',
+            type: card.type || existingCard?.type || 'CoreValue',
             competency: card.competency || existingCard?.competency,
             competencyNameKo: card.competencyNameKo || '',
             competencyNameEn: card.competencyNameEn || '',
@@ -387,14 +392,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           return;
         }
 
-        // 기존 이벤트 카드는 유지하고, 가져온 카드로 완전히 대체 (덮어쓰기)
-        const eventCards = cards.filter(c => c.type === 'Event' || !c.boardIndex);
-        const updatedCards = [...validatedCards, ...eventCards];
+        // 커스텀 모드: 모든 카드 완전 덮어쓰기 (이벤트 카드 포함)
+        // 다른 모드: 기존 이벤트 카드는 유지하고, 역량 카드만 덮어쓰기
+        let updatedCards: ExtendedGameCard[];
+        if (gameMode === GameVersion.Custom) {
+          // 커스텀 모드에서는 가져온 카드로 완전히 대체
+          updatedCards = validatedCards;
+        } else {
+          // 다른 모드에서는 이벤트 카드 유지
+          const eventCards = cards.filter(c => c.type === 'Event' || !c.boardIndex);
+          updatedCards = [...validatedCards, ...eventCards];
+        }
 
         setCards(updatedCards);
         setHasChanges(true);
         setImportStatus('success');
-        setImportMessage(`${validatedCards.length}개 카드를 성공적으로 가져왔습니다. (기존 카드 덮어쓰기)`);
+        const importModeMessage = gameMode === GameVersion.Custom
+          ? `${validatedCards.length}개 카드를 성공적으로 가져왔습니다. (모든 카드 덮어쓰기)`
+          : `${validatedCards.length}개 카드를 성공적으로 가져왔습니다. (역량 카드 덮어쓰기)`;
+        setImportMessage(importModeMessage);
         setTimeout(() => setImportStatus('idle'), 3000);
 
       } catch (error) {
@@ -550,7 +566,9 @@ JSON만 응답하세요.`;
               <div>
                 <h2 className="text-2xl font-bold">관리자 대시보드</h2>
                 <p className="text-indigo-200 text-sm">
-                  {gameMode === GameVersion.CoreValue ? '핵심가치' : gameMode === GameVersion.Communication ? '소통&갈등관리' : '신입직원 직장생활'} 모드 카드 관리
+                  {gameMode === GameVersion.CoreValue ? '핵심가치' :
+                   gameMode === GameVersion.Communication ? '소통&갈등관리' :
+                   gameMode === GameVersion.NewEmployee ? '신입직원 직장생활' : '커스텀'} 모드 카드 관리
                 </p>
               </div>
             </div>
@@ -716,6 +734,11 @@ JSON만 응답하세요.`;
         <div className="flex-1 overflow-y-auto p-4">
           <div className="text-sm text-gray-500 mb-4">
             총 {filteredCards.length}개 카드 (역량 카드 22개 + 이벤트 카드 9개)
+            {gameMode === GameVersion.Custom && (
+              <span className="ml-2 text-purple-600 font-medium">
+                ※ 커스텀 모드: 모든 카드 수정 가능
+              </span>
+            )}
           </div>
 
           <div className="space-y-3">
