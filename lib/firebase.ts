@@ -2,6 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 // Firebase 설정 - 환경 변수에서 가져옴
 // Vercel 배포 시 Environment Variables에서 설정 필요
@@ -22,5 +23,8 @@ export const db = getFirestore(app);
 
 // Firebase Auth 인스턴스 (선택사항)
 export const auth = getAuth(app);
+
+// Firebase Storage 인스턴스 (이미지 업로드용)
+export const storage = getStorage(app);
 
 export default app;
