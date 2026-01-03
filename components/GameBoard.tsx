@@ -183,12 +183,12 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
                   /* 핵심가치 모드: 검정배경에 핵심가치명, 흰배경에 카드제목 */
                   <>
                     <div className="h-[30%] w-full border-b-2 border-black bg-gray-900 flex items-center justify-center px-1">
-                      <span className="text-[9px] md:text-[11px] text-white font-black leading-tight break-keep text-center">
+                      <span className="text-xs md:text-sm text-white font-black leading-tight break-keep text-center">
                         {getSquareDisplayName(square)}
                       </span>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center p-1 text-center bg-white">
-                      <span className="text-[9px] md:text-xs font-bold text-gray-800 leading-tight break-keep">
+                      <span className="text-xs md:text-sm font-bold text-gray-800 leading-tight break-keep">
                         {getCardTitle(square) || '상황카드'}
                       </span>
                     </div>
@@ -198,7 +198,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode })
                   <>
                     <div className={`h-[20%] w-full border-b-2 border-black ${getModuleColor(square.module)}`}></div>
                     <div className="flex-1 flex flex-col items-center justify-center p-1 text-center bg-[#fafafa]">
-                      <span className="text-[9px] md:text-xs font-black text-gray-900 leading-tight break-keep">
+                      <span className="text-xs md:text-sm font-black text-gray-900 leading-tight break-keep">
                         {getSquareDisplayName(square)}
                       </span>
                     </div>
