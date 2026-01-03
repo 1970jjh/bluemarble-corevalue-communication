@@ -383,6 +383,17 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
           .history-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12px; }
           .history-table th, .history-table td { border: 1px solid #d1d5db; padding: 6px; text-align: left; }
           .history-table th { background: #374151; color: white; }
+          .turn-record { background: #f9fafb; padding: 15px; margin: 10px 0; border: 1px solid #e5e7eb; border-radius: 8px; page-break-inside: avoid; }
+          .turn-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+          .turn-badge { background: #2563eb; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+          .turn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+          .turn-item { background: white; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; }
+          .turn-label { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
+          .ai-analysis { background: linear-gradient(to right, #eef2ff, #eff6ff); padding: 12px; border: 1px solid #c7d2fe; border-radius: 6px; margin-top: 10px; }
+          .ai-analysis-title { font-weight: bold; color: #4338ca; margin-bottom: 8px; font-size: 12px; }
+          .score-change { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+          .score-positive { background: #dcfce7; color: #166534; }
+          .score-negative { background: #fee2e2; color: #991b1b; }
           .ai-feedback { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 15px; margin-top: 15px; }
           .conclusion-box { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin-top: 30px; }
           @media print {
@@ -613,27 +624,63 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
 
                          {team.history.length > 0 && (
                            <>
-                             <h4 className="font-bold mb-2">턴별 기록</h4>
-                             <table className="history-table w-full mb-4 text-xs">
-                               <thead>
-                                 <tr>
-                                   <th className="bg-gray-700 text-white p-2">턴</th>
-                                   <th className="bg-gray-700 text-white p-2">상황</th>
-                                   <th className="bg-gray-700 text-white p-2">선택</th>
-                                   <th className="bg-gray-700 text-white p-2">이유</th>
-                                 </tr>
-                               </thead>
-                               <tbody>
-                                 {team.history.map((h, i) => (
-                                   <tr key={i}>
-                                     <td className="p-2 border">{h.turnNumber}</td>
-                                     <td className="p-2 border">{h.cardTitle}</td>
-                                     <td className="p-2 border">{h.choiceText.substring(0, 50)}...</td>
-                                     <td className="p-2 border">{h.reasoning.substring(0, 50)}...</td>
-                                   </tr>
-                                 ))}
-                               </tbody>
-                             </table>
+                             <h4 className="font-bold mb-3 text-gray-800">턴별 상세 기록</h4>
+                             <div className="space-y-4 mb-4">
+                               {team.history.map((h, i) => (
+                                 <div key={i} className="bg-gray-50 p-4 rounded-lg border border-gray-300">
+                                   <div className="flex items-center gap-2 mb-3">
+                                     <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">턴 {h.turnNumber}</span>
+                                     <span className="font-bold text-gray-800">{h.cardTitle}</span>
+                                   </div>
+
+                                   <div className="grid md:grid-cols-2 gap-3 text-sm">
+                                     <div className="bg-white p-3 rounded border">
+                                       <div className="font-bold text-blue-700 mb-1">📋 선택한 옵션</div>
+                                       <p className="text-gray-700">{h.choiceText}</p>
+                                     </div>
+                                     <div className="bg-white p-3 rounded border">
+                                       <div className="font-bold text-purple-700 mb-1">💭 선택 이유</div>
+                                       <p className="text-gray-700">{h.reasoning}</p>
+                                     </div>
+                                   </div>
+
+                                   {h.aiFeedback && (
+                                     <div className="mt-3 bg-gradient-to-r from-indigo-50 to-blue-50 p-3 rounded border border-indigo-200">
+                                       <div className="font-bold text-indigo-700 mb-2">🤖 AI 분석 결과 (장점/단점/총평)</div>
+                                       <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{h.aiFeedback}</p>
+                                     </div>
+                                   )}
+
+                                   {h.scoreChanges && Object.keys(h.scoreChanges).length > 0 && (
+                                     <div className="mt-3 flex flex-wrap gap-2">
+                                       <span className="text-xs text-gray-500 mr-2">점수 변화:</span>
+                                       {Object.entries(h.scoreChanges).map(([key, value]) => {
+                                         const labels: Record<string, string> = {
+                                           capital: '자원',
+                                           energy: '에너지',
+                                           trust: '신뢰',
+                                           competency: '역량',
+                                           insight: '통찰'
+                                         };
+                                         const numValue = value as number;
+                                         if (numValue === 0) return null;
+                                         const isPositive = numValue > 0;
+                                         return (
+                                           <span
+                                             key={key}
+                                             className={`px-2 py-1 rounded text-xs font-bold ${
+                                               isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                             }`}
+                                           >
+                                             {labels[key] || key}: {isPositive ? '+' : ''}{numValue}
+                                           </span>
+                                         );
+                                       })}
+                                     </div>
+                                   )}
+                                 </div>
+                               ))}
+                             </div>
                            </>
                          )}
 

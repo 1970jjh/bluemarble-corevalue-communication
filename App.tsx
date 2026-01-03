@@ -152,7 +152,7 @@ const App: React.FC = () => {
   // Helper to get current session object
   const currentSession = sessions.find(s => s.id === currentSessionId);
   const teams = currentSession ? currentSession.teams : [];
-  const currentTeam = teams[currentTurnIndex];
+  const currentTeam = teams[currentTurnIndex] || teams[0]; // fallback to first team
 
   // 세션의 커스텀 카드 가져오기 (세션별로 저장됨)
   const sessionCustomCards = currentSession?.customCards || [];
