@@ -1165,6 +1165,13 @@ const App: React.FC = () => {
     // 커스텀 모드: 모든 칸(특수 칸 포함)에서 boardIndex로 업로드된 카드 사용
     const isCustomMode = currentSession?.version === GameVersion.Custom;
 
+    // 출발 칸은 모든 모드에서 동일하게 처리 (보너스만 주고 넘어감)
+    if (square.type === SquareType.Start) {
+      updateTeamResources(team.id, { capital: 50 });
+      nextTurn();
+      return;
+    }
+
     if (isCustomMode && sessionCards.length > 0) {
       // 커스텀 모드: boardIndex로 카드 찾기 (모든 칸에서)
       const customCard = sessionCards.find((c: any) => c.boardIndex === square.index);
@@ -1263,11 +1270,6 @@ const App: React.FC = () => {
         ? sessionCards.filter((c: any) => c.type === 'Burnout')
         : EVENT_CARDS.filter(c => c.type === 'Burnout');
       selectedCard = burnoutCardPool[0] || EVENT_CARDS.find(c => c.type === 'Burnout') || EVENT_CARDS[0];
-    }
-    else if (square.type === SquareType.Start) {
-      updateTeamResources(team.id, { capital: 50 });
-      nextTurn();
-      return;
     }
     else {
       nextTurn();
