@@ -99,6 +99,10 @@ const App: React.FC = () => {
   const [riskCardInfo, setRiskCardInfo] = useState<{ teamName: string; chanceCardNumber: number } | null>(null);
   const [isRiskCardMode, setIsRiskCardMode] = useState(false);  // 리스크 카드 상황 (모든 점수 마이너스)
 
+  // 커스텀 모드 특수 효과 상태
+  const [customScoreMultiplier, setCustomScoreMultiplier] = useState(1);  // 커스텀 모드 점수 배수 (2배 찬스, 3배 찬스)
+  const [isSharingMode, setIsSharingMode] = useState(false);  // 나눔카드 모드 (모든 팀에 동일 점수 적용)
+
   // --- Active Card & Decision State (Shared between Admin & Mobile) ---
   const [activeCard, setActiveCard] = useState<GameCard | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
@@ -1158,19 +1162,50 @@ const App: React.FC = () => {
 
     let selectedCard: GameCard | null = null;
 
-    if (square.type === SquareType.City) {
-      // 커스텀 모드: boardIndex로 카드 찾기
-      if (currentSession?.version === GameVersion.Custom && sessionCards.length > 0) {
-        const customCard = sessionCards.find((c: any) => c.boardIndex === square.index);
-        selectedCard = customCard || sessionCards[0];
-        console.log(`[Card Selection] Custom Mode - Square: ${square.index}, Found: ${customCard?.title || 'fallback'}`);
-      } else {
-        // 일반 모드: 역량(competency)에 맞는 카드 선택
-        const targetCompetency = getCompetencyForSquare(square.index, sessionCardType);
-        const exactCard = allCards.find(c => c.competency === targetCompetency);
-        selectedCard = exactCard || modeCards[0];
-        console.log(`[Card Selection] Square: ${square.index}, Mode: ${sessionCardType}, Target: ${targetCompetency}, Found: ${exactCard?.title || 'fallback'}`);
+    // 커스텀 모드: 모든 칸(특수 칸 포함)에서 boardIndex로 업로드된 카드 사용
+    const isCustomMode = currentSession?.version === GameVersion.Custom;
+
+    if (isCustomMode && sessionCards.length > 0) {
+      // 커스텀 모드: boardIndex로 카드 찾기 (모든 칸에서)
+      const customCard = sessionCards.find((c: any) => c.boardIndex === square.index);
+      selectedCard = customCard || sessionCards[0];
+      console.log(`[Card Selection] Custom Mode - Square: ${square.index}, Type: ${square.type}, Found: ${customCard?.title || 'fallback'}`);
+
+      // 커스텀 모드 특수 칸 효과 적용
+      // 2배 찬스: 인덱스 2, 12, 31
+      if ([2, 12, 31].includes(square.index)) {
+        setCustomScoreMultiplier(2);
+        addLog(`🎲 [${team.name}] 2배 찬스! AI 평가 점수가 2배로 적용됩니다.`);
       }
+      // 나눔카드: 인덱스 7, 19
+      else if ([7, 19].includes(square.index)) {
+        setIsSharingMode(true);
+        addLog(`🤝 [${team.name}] 나눔카드! 이 팀이 얻는 점수가 모든 팀에게 동일하게 적용됩니다.`);
+      }
+      // 3배 찬스: 인덱스 16, 24
+      else if ([16, 24].includes(square.index)) {
+        setCustomScoreMultiplier(3);
+        addLog(`🚀 [${team.name}] 3배 찬스! AI 평가 점수가 3배로 적용됩니다.`);
+      }
+      // 번아웃존: 인덱스 8 - 5개 영역 각 -10점 즉시 적용
+      else if (square.index === 8) {
+        const burnoutPenalty = { capital: -10, energy: -10, trust: -10, competency: -10, insight: -10 };
+        updateTeamResources(team.id, burnoutPenalty);
+        addLog(`🔥 [${team.name}] 번아웃존! 5개 영역에서 각각 -10 POINT 감점됩니다.`);
+      }
+      // 성장펀드: 인덱스 27 - 5개 영역 각 +10점 즉시 적용
+      else if (square.index === 27) {
+        const growthBonus = { capital: 10, energy: 10, trust: 10, competency: 10, insight: 10 };
+        updateTeamResources(team.id, growthBonus);
+        addLog(`📈 [${team.name}] 성장펀드! 5개 영역에서 각각 +10 POINT 보너스를 받습니다.`);
+      }
+    }
+    else if (square.type === SquareType.City) {
+      // 일반 모드: 역량(competency)에 맞는 카드 선택
+      const targetCompetency = getCompetencyForSquare(square.index, sessionCardType);
+      const exactCard = allCards.find(c => c.competency === targetCompetency);
+      selectedCard = exactCard || modeCards[0];
+      console.log(`[Card Selection] Square: ${square.index}, Mode: ${sessionCardType}, Target: ${targetCompetency}, Found: ${exactCard?.title || 'fallback'}`);
     }
     else if (square.type === SquareType.GoldenKey) {
       // 찬스카드 타입 확인 (1/3/5 → lottery, 2/4 → risk)
@@ -1878,15 +1913,19 @@ const App: React.FC = () => {
       return score > 0 ? -score : score;
     };
 
-    // 더블 찬스: 모든 점수 2배 적용 (양수든 음수든)
-    const multiplier = isDoubleChance ? 2 : 1;
+    // 더블 찬스 + 커스텀 배수 적용 (양수든 음수든)
+    // 더블 찬스(주사위 더블)는 기존 로직 유지, 커스텀 배수(2배/3배 찬스)는 별도 적용
+    const doubleMultiplier = isDoubleChance ? 2 : 1;
+    const customMultiplier = customScoreMultiplier > 1 ? customScoreMultiplier : 1;
+    const totalMultiplier = doubleMultiplier * customMultiplier;
+
     let scoreChanges = {
-      capital: baseScoreChanges.capital !== undefined ? baseScoreChanges.capital * multiplier : undefined,
-      energy: baseScoreChanges.energy !== undefined ? baseScoreChanges.energy * multiplier : undefined,
-      reputation: baseScoreChanges.reputation !== undefined ? baseScoreChanges.reputation * multiplier : undefined,
-      trust: baseScoreChanges.trust !== undefined ? baseScoreChanges.trust * multiplier : undefined,
-      competency: baseScoreChanges.competency !== undefined ? baseScoreChanges.competency * multiplier : undefined,
-      insight: baseScoreChanges.insight !== undefined ? baseScoreChanges.insight * multiplier : undefined,
+      capital: baseScoreChanges.capital !== undefined ? baseScoreChanges.capital * totalMultiplier : undefined,
+      energy: baseScoreChanges.energy !== undefined ? baseScoreChanges.energy * totalMultiplier : undefined,
+      reputation: baseScoreChanges.reputation !== undefined ? baseScoreChanges.reputation * totalMultiplier : undefined,
+      trust: baseScoreChanges.trust !== undefined ? baseScoreChanges.trust * totalMultiplier : undefined,
+      competency: baseScoreChanges.competency !== undefined ? baseScoreChanges.competency * totalMultiplier : undefined,
+      insight: baseScoreChanges.insight !== undefined ? baseScoreChanges.insight * totalMultiplier : undefined,
     };
 
     // 리스크 카드: 모든 점수를 음수로 강제 변환
@@ -1904,6 +1943,14 @@ const App: React.FC = () => {
 
     if (isDoubleChance) {
       addLog(`🎲 더블 찬스 적용! 모든 점수 x2 (기존 점수의 2배)`);
+    }
+    if (customScoreMultiplier > 1) {
+      addLog(`🎯 ${customScoreMultiplier}배 찬스 적용! 모든 점수 x${customScoreMultiplier}`);
+    }
+
+    // 나눔카드 효과: 모든 팀에 동일한 점수 적용
+    if (isSharingMode) {
+      addLog(`🤝 나눔카드 적용! ${currentTeam.name}의 점수가 모든 팀에게 동일하게 적용됩니다.`);
     }
 
     const updatedTeams = currentSession.teams.map((team, idx) => {
@@ -1929,6 +1976,17 @@ const App: React.FC = () => {
           currentMemberIndex: nextMemberIndex
         };
       }
+      // 나눔카드 모드: 다른 팀에도 동일한 점수 적용
+      else if (isSharingMode) {
+        const newResources = { ...team.resources };
+        if (scoreChanges.capital !== undefined) newResources.capital += scoreChanges.capital;
+        if (scoreChanges.energy !== undefined) newResources.energy += scoreChanges.energy;
+        if (scoreChanges.reputation !== undefined) newResources.reputation += scoreChanges.reputation;
+        if (scoreChanges.trust !== undefined) newResources.trust += scoreChanges.trust;
+        if (scoreChanges.competency !== undefined) newResources.competency += scoreChanges.competency;
+        if (scoreChanges.insight !== undefined) newResources.insight += scoreChanges.insight;
+        return { ...team, resources: newResources };
+      }
       return team;
     });
 
@@ -1951,6 +2009,8 @@ const App: React.FC = () => {
     setMySpectatorVote(null);  // 내 투표 초기화
     setIsDoubleChance(false);  // 더블 찬스 초기화
     setIsRiskCardMode(false);  // 리스크 카드 모드 초기화
+    setCustomScoreMultiplier(1);  // 커스텀 모드 점수 배수 초기화
+    setIsSharingMode(false);  // 나눔카드 모드 초기화
     setGamePhase(GamePhase.Idle);
     setTurnTimeLeft(120);
 

@@ -136,6 +136,7 @@ export const NEW_EMPLOYEE_BOARD_NAMES: Record<number, string> = {
 
 // 커스텀 모드용 보드 칸 기본 이름 (관리자가 JSON으로 설정 가능)
 export const CUSTOM_BOARD_NAMES: Record<number, string> = {
+  // 일반 카드 칸 (22개)
   1: '카드 1',
   3: '카드 2',
   4: '카드 3',
@@ -158,4 +159,14 @@ export const CUSTOM_BOARD_NAMES: Record<number, string> = {
   28: '카드 20',
   29: '카드 21',
   30: '카드 22',
+  // 특수 칸 (9개) - 커스텀 모드 전용 이름
+  2: '🎲 2배 찬스',
+  7: '🤝 나눔카드',
+  8: '🔥 번아웃존',
+  12: '🎲 2배 찬스',
+  16: '🚀 3배 찬스',
+  19: '🤝 나눔카드',
+  24: '🚀 3배 찬스',
+  27: '📈 성장펀드',
+  31: '🎲 2배 찬스',
 };
