@@ -241,7 +241,7 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
                      {isMyTurn ? (
                        <button
                          onClick={onSubmit}
-                         disabled={!activeInput.reasoning.trim() || isSaving}
+                         disabled={(!isOpenEnded && !activeInput.choice) || !activeInput.reasoning.trim() || isSaving}
                          className="w-full py-3 bg-blue-600 text-white font-black uppercase flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50"
                        >
                          {isSaving ? (

@@ -42,20 +42,22 @@ const GameBoard: React.FC<GameBoardProps> = ({ teams, onSquareClick, gameMode, c
 
   // 모드별 보드 칸 이름 가져오기
   const getSquareDisplayName = (square: BoardSquare): string => {
-    // 역량 칸이 아니면 기본 이름 사용
-    if (square.type !== SquareType.City) {
-      return square.name.split('(')[0];
-    }
-
-    // 커스텀 모드: customCards에서 해당 보드 인덱스의 카드 제목 가져오기
+    // 커스텀 모드: 모든 칸(특수 칸 포함)에서 customCards 또는 CUSTOM_BOARD_NAMES 사용
     if (gameMode === GameVersion.Custom || gameMode === '커스텀') {
+      // 먼저 customCards에서 해당 boardIndex의 카드 제목 찾기
       if (customCards && customCards.length > 0) {
         const customCard = customCards.find((c: any) => c.boardIndex === square.index);
         if (customCard) {
           return customCard.title || CUSTOM_BOARD_NAMES[square.index] || `카드 ${square.index}`;
         }
       }
-      return CUSTOM_BOARD_NAMES[square.index] || `카드 ${square.index}`;
+      // customCards에 없으면 CUSTOM_BOARD_NAMES 사용
+      return CUSTOM_BOARD_NAMES[square.index] || square.name.split('(')[0];
+    }
+
+    // 일반 모드: 역량 칸이 아니면 기본 이름 사용
+    if (square.type !== SquareType.City) {
+      return square.name.split('(')[0];
     }
 
     // 모드별 이름 매핑 사용

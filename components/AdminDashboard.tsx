@@ -67,10 +67,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const getDefaultCards = (): ExtendedGameCard[] => {
     // Custom 모드는 빈 카드 리스트로 시작 (JSON 업로드 또는 개별 추가)
     if (gameMode === GameVersion.Custom) {
-      // 22개의 빈 커스텀 카드 생성
+      // 31개의 빈 커스텀 카드 생성 (출발 칸 제외한 모든 칸)
       const customEmptyCards: ExtendedGameCard[] = [];
-      const citySquares = BOARD_SQUARES.filter(s => s.type === SquareType.City);
-      citySquares.forEach((square, idx) => {
+      // 출발 칸(index 0) 제외한 모든 칸
+      const allSquaresExceptStart = BOARD_SQUARES.filter(s => s.type !== SquareType.Start);
+      // boardIndex 순으로 정렬
+      allSquaresExceptStart.sort((a, b) => a.index - b.index);
+
+      allSquaresExceptStart.forEach((square, idx) => {
         customEmptyCards.push({
           id: `custom-${idx + 1}`,
           type: 'Custom',
@@ -87,13 +91,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           boardIndex: square.index
         });
       });
-      // 이벤트 카드도 추가
-      const eventCards: ExtendedGameCard[] = EVENT_CARDS.map(card => ({
-        ...card,
-        competencyNameKo: '',
-        competencyNameEn: ''
-      }));
-      return [...customEmptyCards, ...eventCards];
+      // 커스텀 모드에서는 이벤트 카드를 추가하지 않음 (31개 칸 모두 커스텀 카드 사용)
+      return customEmptyCards;
     }
 
     let modeCards: GameCard[];
