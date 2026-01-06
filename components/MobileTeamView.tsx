@@ -15,7 +15,7 @@ interface MobileTeamViewProps {
   activeCard: GameCard | null;
   activeInput: { choice: Choice | null, reasoning: string };
   onInputChange: (choice: Choice, reason: string) => void;
-  onSubmit: () => void;
+  onSubmit: (choice?: Choice | null, reasoning?: string) => void;
   isTeamSaved: boolean;  // 팀이 저장했는지 여부
   isSaving: boolean;     // 저장 중 여부
   isGameStarted?: boolean;  // 게임 시작 여부
@@ -72,15 +72,13 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
   const currentSquare = BOARD_SQUARES.find(s => s.index === team.position);
   const isOpenEnded = activeCard && (!activeCard.choices || activeCard.choices.length === 0);
 
-  // 저장 핸들러: 로컬 상태를 서버에 동기화
+  // 저장 핸들러: 로컬 상태를 서버에 직접 전달 (상태 업데이트 지연 문제 해결)
   const handleSave = () => {
     if (localChoice || isOpenEnded) {
-      // 먼저 로컬 상태를 서버에 동기화
+      // 로컬 상태를 서버에 동기화 (UI 표시용)
       onInputChange(localChoice!, localReasoning);
-      // 약간의 지연 후 저장 실행
-      setTimeout(() => {
-        onSubmit();
-      }, 100);
+      // 로컬 상태를 직접 전달하여 즉시 저장 (한 번 클릭으로 저장)
+      onSubmit(localChoice, localReasoning);
     }
   };
 

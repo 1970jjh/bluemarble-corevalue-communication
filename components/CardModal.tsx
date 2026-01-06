@@ -286,12 +286,16 @@ const CardModal: React.FC<CardModalProps> = ({
                     <button
                       onClick={onAISubmit}
                       disabled={isProcessing}
-                      className="w-full py-4 bg-purple-600 text-white text-xl font-black uppercase border-4 border-black hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all shadow-hard"
+                      className={`w-full py-4 text-white text-xl font-black uppercase border-4 border-black flex items-center justify-center gap-3 transition-all shadow-hard
+                        ${isProcessing
+                          ? 'bg-purple-500 cursor-wait'
+                          : 'bg-purple-600 hover:bg-purple-700'}`}
                     >
                       {isProcessing ? (
-                        <>
-                          <Sparkles className="animate-spin" /> AI 분석 중...
-                        </>
+                        <span className="flex items-center gap-3 animate-pulse">
+                          <Sparkles className="animate-spin" />
+                          <span>AI 분석 실행 중...</span>
+                        </span>
                       ) : (
                         <>
                           <Sparkles size={24} /> AI 분석 실행
