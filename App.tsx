@@ -1671,16 +1671,25 @@ const App: React.FC = () => {
   };
 
   // --- 팀 입력 저장 (AI 호출 없이) ---
+  // 파라미터가 전달되면 그 값을 사용, 아니면 현재 상태값 사용
 
-  const handleTeamSaveOnly = async () => {
+  const handleTeamSaveOnly = async (directChoice?: Choice | null, directReasoning?: string) => {
     if (!currentTeam || !activeCard) return;
     if (isSaving || isTeamSaved) return;
 
+    // 직접 전달된 값이 있으면 사용, 없으면 현재 상태값 사용
+    const choiceToSave = directChoice !== undefined ? directChoice : sharedSelectedChoice;
+    const reasoningToSave = directReasoning !== undefined ? directReasoning : sharedReasoning;
+
     const isOpenEnded = !activeCard.choices || activeCard.choices.length === 0;
-    if (isOpenEnded && !sharedReasoning) return;
-    if (!isOpenEnded && (!sharedSelectedChoice || !sharedReasoning)) return;
+    if (isOpenEnded && !reasoningToSave) return;
+    if (!isOpenEnded && (!choiceToSave || !reasoningToSave)) return;
 
     setIsSaving(true);
+
+    // 직접 전달된 값으로 상태도 업데이트 (UI 동기화)
+    if (directChoice !== undefined) setSharedSelectedChoice(directChoice);
+    if (directReasoning !== undefined) setSharedReasoning(directReasoning);
 
     // Firebase에 팀 입력 저장 (AI 결과 없이)
     const isFirebaseConfigured = import.meta.env.VITE_FIREBASE_PROJECT_ID;
@@ -1693,8 +1702,8 @@ const App: React.FC = () => {
           currentTurn: 0,
           diceValue: diceValue,
           currentCard: activeCard,
-          selectedChoice: sharedSelectedChoice,
-          reasoning: sharedReasoning,
+          selectedChoice: choiceToSave,
+          reasoning: reasoningToSave,
           aiResult: null,
           isSubmitted: true,      // 팀이 저장 완료
           isAiProcessing: false,  // AI는 아직 실행 안됨
