@@ -370,6 +370,16 @@ const App: React.FC = () => {
           });
         }
 
+        // Idle 상태에서는 카드 관련 상태 명시적 초기화 (턴 전환 시 중요)
+        if (state.phase === GamePhase.Idle) {
+          setActiveCard(null);
+          setShowCardModal(false);
+          setSharedSelectedChoice(null);
+          setSharedReasoning('');
+          setIsTeamSaved(false);
+          setSpectatorModalDismissed(false);  // 관람자 모달 상태 초기화
+        }
+
         // 카드가 있으면 모달 표시
         if (state.currentCard && state.phase === GamePhase.Decision) {
           setShowCardModal(true);
