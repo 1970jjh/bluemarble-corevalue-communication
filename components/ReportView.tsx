@@ -380,9 +380,15 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
           .score-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
           .score-table th, .score-table td { border: 1px solid #d1d5db; padding: 8px; text-align: center; }
           .score-table th { background: #1e3a8a; color: white; }
-          .history-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12px; }
-          .history-table th, .history-table td { border: 1px solid #d1d5db; padding: 6px; text-align: left; }
-          .history-table th { background: #374151; color: white; }
+          .history-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 11px; }
+          .history-table th, .history-table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
+          .history-table th { background: #374151; color: white; font-weight: bold; }
+          .history-table tr:nth-child(even) { background: #f9fafb; }
+          .ai-section { padding: 4px 6px; border-radius: 4px; margin: 3px 0; font-size: 10px; }
+          .ai-section.strength { background: #dcfce7; color: #166534; }
+          .ai-section.risk { background: #fed7aa; color: #9a3412; }
+          .ai-section.summary { background: #dbeafe; color: #1e40af; }
+          .ai-section.model { background: #e9d5ff; color: #6b21a8; }
           .turn-record { background: #f9fafb; padding: 15px; margin: 10px 0; border: 1px solid #e5e7eb; border-radius: 8px; page-break-inside: avoid; }
           .turn-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
           .turn-badge { background: #2563eb; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
@@ -624,62 +630,119 @@ const ReportView: React.FC<ReportViewProps> = ({ teams, onClose }) => {
 
                          {team.history.length > 0 && (
                            <>
-                             <h4 className="font-bold mb-3 text-gray-800">턴별 상세 기록</h4>
-                             <div className="space-y-4 mb-4">
-                               {team.history.map((h, i) => (
-                                 <div key={i} className="bg-gray-50 p-4 rounded-lg border border-gray-300">
-                                   <div className="flex items-center gap-2 mb-3">
-                                     <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">턴 {h.turnNumber}</span>
-                                     <span className="font-bold text-gray-800">{h.cardTitle}</span>
-                                   </div>
+                             <h4 className="font-bold mb-3 text-gray-800 flex items-center gap-2">
+                               📊 턴별 상세 기록
+                               <span className="text-xs font-normal text-gray-500">({team.history.length}턴)</span>
+                             </h4>
 
-                                   <div className="grid md:grid-cols-2 gap-3 text-sm">
-                                     <div className="bg-white p-3 rounded border">
-                                       <div className="font-bold text-blue-700 mb-1">📋 선택한 옵션</div>
-                                       <p className="text-gray-700">{h.choiceText}</p>
-                                     </div>
-                                     <div className="bg-white p-3 rounded border">
-                                       <div className="font-bold text-purple-700 mb-1">💭 선택 이유</div>
-                                       <p className="text-gray-700">{h.reasoning}</p>
-                                     </div>
-                                   </div>
+                             {/* 표 형식 턴별 기록 */}
+                             <div className="overflow-x-auto mb-4">
+                               <table className="history-table w-full border-collapse text-sm">
+                                 <thead>
+                                   <tr className="bg-gray-800 text-white">
+                                     <th className="p-2 border border-gray-600 w-16 text-center">턴</th>
+                                     <th className="p-2 border border-gray-600 min-w-[150px]">📖 상황</th>
+                                     <th className="p-2 border border-gray-600 min-w-[100px]">📋 선택옵션</th>
+                                     <th className="p-2 border border-gray-600 min-w-[120px]">💭 선택이유</th>
+                                     <th className="p-2 border border-gray-600 min-w-[180px]">🤖 AI 평가</th>
+                                     <th className="p-2 border border-gray-600 w-24">점수변화</th>
+                                   </tr>
+                                 </thead>
+                                 <tbody>
+                                   {team.history.map((h, i) => {
+                                     // AI 피드백 파싱 (장점/리스크/총평/모범답안)
+                                     const parseAiFeedback = (feedback: string) => {
+                                       const sections: { label: string; content: string; bgColor: string; textColor: string }[] = [];
 
-                                   {h.aiFeedback && (
-                                     <div className="mt-3 bg-gradient-to-r from-indigo-50 to-blue-50 p-3 rounded border border-indigo-200">
-                                       <div className="font-bold text-indigo-700 mb-2">🤖 AI 분석 결과 (장점/리스크/총평/모범답안)</div>
-                                       <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{h.aiFeedback}</p>
-                                     </div>
-                                   )}
+                                       // 각 섹션 패턴 매칭
+                                       const patterns = [
+                                         { regex: /\[장점\]\s*/i, label: '💪 장점', bgColor: 'bg-green-100', textColor: 'text-green-800' },
+                                         { regex: /\[리스크\]\s*/i, label: '⚠️ 리스크', bgColor: 'bg-orange-100', textColor: 'text-orange-800' },
+                                         { regex: /\[총평\]\s*/i, label: '📝 총평', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
+                                         { regex: /\[모범답안\]\s*/i, label: '✨ 모범답안', bgColor: 'bg-purple-100', textColor: 'text-purple-800' }
+                                       ];
 
-                                   {h.scoreChanges && Object.keys(h.scoreChanges).length > 0 && (
-                                     <div className="mt-3 flex flex-wrap gap-2">
-                                       <span className="text-xs text-gray-500 mr-2">점수 변화:</span>
-                                       {Object.entries(h.scoreChanges).map(([key, value]) => {
-                                         const labels: Record<string, string> = {
-                                           capital: '자원',
-                                           energy: '에너지',
-                                           trust: '신뢰',
-                                           competency: '역량',
-                                           insight: '통찰'
-                                         };
-                                         const numValue = value as number;
-                                         if (numValue === 0) return null;
-                                         const isPositive = numValue > 0;
-                                         return (
-                                           <span
-                                             key={key}
-                                             className={`px-2 py-1 rounded text-xs font-bold ${
-                                               isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                             }`}
-                                           >
-                                             {labels[key] || key}: {isPositive ? '+' : ''}{numValue}
+                                       let remaining = feedback;
+                                       patterns.forEach(({ regex, label, bgColor, textColor }) => {
+                                         const match = remaining.match(regex);
+                                         if (match) {
+                                           const parts = remaining.split(regex);
+                                           if (parts[1]) {
+                                             let content = parts[1];
+                                             // 다음 섹션 시작 전까지 내용 추출
+                                             patterns.forEach(p => {
+                                               const nextMatch = content.match(p.regex);
+                                               if (nextMatch) {
+                                                 content = content.split(p.regex)[0];
+                                               }
+                                             });
+                                             sections.push({ label, content: content.trim(), bgColor, textColor });
+                                           }
+                                         }
+                                       });
+
+                                       return sections.length > 0 ? sections : [{ label: '', content: feedback, bgColor: '', textColor: 'text-gray-700' }];
+                                     };
+
+                                     const feedbackSections = h.aiFeedback ? parseAiFeedback(h.aiFeedback) : [];
+
+                                     return (
+                                       <tr key={i} className="hover:bg-gray-50 align-top">
+                                         <td className="p-2 border border-gray-300 text-center font-bold bg-blue-50">
+                                           <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{h.turnNumber}</span>
+                                         </td>
+                                         <td className="p-2 border border-gray-300">
+                                           <div className="font-bold text-gray-800 mb-1">{h.cardTitle}</div>
+                                           <p className="text-gray-600 text-xs leading-relaxed">{h.situation}</p>
+                                         </td>
+                                         <td className="p-2 border border-gray-300">
+                                           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold inline-block">
+                                             {h.choiceText}
                                            </span>
-                                         );
-                                       })}
-                                     </div>
-                                   )}
-                                 </div>
-                               ))}
+                                         </td>
+                                         <td className="p-2 border border-gray-300">
+                                           <p className="text-gray-700 text-xs leading-relaxed">{h.reasoning}</p>
+                                         </td>
+                                         <td className="p-2 border border-gray-300">
+                                           <div className="space-y-1">
+                                             {feedbackSections.map((section, si) => (
+                                               <div key={si} className={`p-1.5 rounded text-xs ${section.bgColor} ${section.textColor}`}>
+                                                 {section.label && <strong>{section.label}: </strong>}
+                                                 <span className="leading-relaxed">{section.content.substring(0, 80)}{section.content.length > 80 ? '...' : ''}</span>
+                                               </div>
+                                             ))}
+                                           </div>
+                                         </td>
+                                         <td className="p-2 border border-gray-300">
+                                           {h.scoreChanges && Object.keys(h.scoreChanges).length > 0 && (
+                                             <div className="flex flex-col gap-1">
+                                               {Object.entries(h.scoreChanges).map(([key, value]) => {
+                                                 const labels: Record<string, string> = {
+                                                   capital: '자원', energy: '에너지', trust: '신뢰',
+                                                   competency: '역량', insight: '통찰'
+                                                 };
+                                                 const numValue = value as number;
+                                                 if (numValue === 0) return null;
+                                                 const isPositive = numValue > 0;
+                                                 return (
+                                                   <span
+                                                     key={key}
+                                                     className={`px-1.5 py-0.5 rounded text-[10px] font-bold text-center ${
+                                                       isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                     }`}
+                                                   >
+                                                     {labels[key]}: {isPositive ? '+' : ''}{numValue}
+                                                   </span>
+                                                 );
+                                               })}
+                                             </div>
+                                           )}
+                                         </td>
+                                       </tr>
+                                     );
+                                   })}
+                                 </tbody>
+                               </table>
                              </div>
                            </>
                          )}

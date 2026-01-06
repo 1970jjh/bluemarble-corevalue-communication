@@ -2489,6 +2489,7 @@ const App: React.FC = () => {
           isTeamSaved={isTeamSaved}
           isSaving={isSaving}
           isGameStarted={isGameStarted}
+          isAiProcessing={isAiProcessing}
           spectatorVote={mySpectatorVote}
           onSpectatorVote={(choice) => handleSpectatorVote(choice, participantTeam.name)}
           spectatorVotes={spectatorVotes}
@@ -2690,6 +2691,7 @@ const App: React.FC = () => {
                  isTeamSaved={isTeamSaved}
                  isSaving={isSaving}
                  isGameStarted={isGameStarted}
+                 isAiProcessing={isAiProcessing}
                  spectatorVotes={spectatorVotes}
                  teamNumber={(teams.findIndex(t => t.id === monitoredTeam.id) ?? 0) + 1}
                  onShowRules={() => setShowGameRules(true)}

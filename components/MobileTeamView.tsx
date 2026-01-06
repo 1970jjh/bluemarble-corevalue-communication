@@ -19,6 +19,7 @@ interface MobileTeamViewProps {
   isTeamSaved: boolean;  // 팀이 저장했는지 여부
   isSaving: boolean;     // 저장 중 여부
   isGameStarted?: boolean;  // 게임 시작 여부
+  isAiProcessing?: boolean;  // AI 분석 중 여부
 
   // 관람자 투표 (다른 팀 턴일 때)
   spectatorVote?: Choice | null;  // 관람자의 현재 선택
@@ -44,14 +45,44 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
   isTeamSaved,
   isSaving,
   isGameStarted = true,
+  isAiProcessing = false,
   spectatorVote,
   onSpectatorVote,
   spectatorVotes = {},
   teamNumber = 1,
   onShowRules
 }) => {
+  // 로컬 상태: 동시 사용자 입력 충돌 방지를 위해 로컬에서 관리
+  const [localChoice, setLocalChoice] = React.useState<Choice | null>(null);
+  const [localReasoning, setLocalReasoning] = React.useState('');
+
+  // activeCard가 변경되면 로컬 상태 초기화 (새 카드가 나왔을 때)
+  React.useEffect(() => {
+    if (activeCard) {
+      // 새 카드가 나오면 로컬 상태를 서버 상태로 초기화 (한 번만)
+      setLocalChoice(activeInput.choice);
+      setLocalReasoning(activeInput.reasoning);
+    } else {
+      // 카드가 없어지면 초기화
+      setLocalChoice(null);
+      setLocalReasoning('');
+    }
+  }, [activeCard?.id]); // activeCard의 id가 변경될 때만 실행
+
   const currentSquare = BOARD_SQUARES.find(s => s.index === team.position);
   const isOpenEnded = activeCard && (!activeCard.choices || activeCard.choices.length === 0);
+
+  // 저장 핸들러: 로컬 상태를 서버에 동기화
+  const handleSave = () => {
+    if (localChoice || isOpenEnded) {
+      // 먼저 로컬 상태를 서버에 동기화
+      onInputChange(localChoice!, localReasoning);
+      // 약간의 지연 후 저장 실행
+      setTimeout(() => {
+        onSubmit();
+      }, 100);
+    }
+  };
 
   // ROLLER: 현재 주사위를 굴릴 팀원 이름
   const currentRollerName = team.members.length > 0
@@ -151,23 +182,37 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
            <div className="bg-white border-4 border-black p-4 mb-4">
              <p className="font-medium text-gray-800 mb-4 text-sm">"{activeCard.situation}"</p>
 
+             {/* AI 분석 중 표시 */}
+             {isAiProcessing && (
+               <div className="bg-purple-100 border-4 border-purple-500 p-4 text-center mb-4 animate-pulse">
+                 <div className="flex items-center justify-center gap-3">
+                   <div className="w-6 h-6 border-3 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                   <span className="font-bold text-purple-800">(AI 분석 중...)</span>
+                 </div>
+               </div>
+             )}
+
              {/* 저장 완료 상태 */}
              {isTeamSaved ? (
                <div className="bg-green-100 border-4 border-green-600 p-6 text-center">
                  <CheckCircle className="mx-auto mb-3 text-green-600" size={48} />
                  <h3 className="text-lg font-black text-green-800 mb-2">저장 완료!</h3>
                  <p className="text-sm text-green-700 font-medium">
-                   관리자가 AI 분석을 진행 중입니다.<br/>
-                   잠시만 기다려주세요.
+                   {isAiProcessing ? (
+                     <>AI가 분석 중입니다...<br/>잠시만 기다려주세요.</>
+                   ) : (
+                     <>관리자가 AI 분석을 진행할 예정입니다.<br/>잠시만 기다려주세요.</>
+                   )}
                  </p>
                </div>
              ) : (
                <>
-                 {/* Choices (Only if not open ended) */}
+                 {/* Choices (Only if not open ended) - 로컬 상태 사용 */}
                  {!isOpenEnded && activeCard.choices && (
                     <div className="space-y-2 mb-4">
                       {activeCard.choices.map(choice => {
-                        const isMyChoice = isMyTurn && activeInput.choice?.id === choice.id;
+                        // 로컬 상태로 선택 여부 확인 (서버 상태가 아닌 로컬 상태)
+                        const isMyChoice = isMyTurn && localChoice?.id === choice.id;
                         const isMySpectatorVote = !isMyTurn && spectatorVote?.id === choice.id;
                         const voterTeams = spectatorVotes[choice.id] || [];
                         const hasOtherVotes = voterTeams.length > 0;
@@ -177,7 +222,8 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
                             key={choice.id}
                             onClick={() => {
                               if (isMyTurn) {
-                                onInputChange(choice, activeInput.reasoning);
+                                // 로컬 상태만 업데이트 (서버에 즉시 전송하지 않음)
+                                setLocalChoice(choice);
                               } else if (onSpectatorVote) {
                                 // 관람자 투표
                                 onSpectatorVote(choice);
@@ -185,15 +231,20 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
                             }}
                             className={`w-full text-left p-3 border-2 font-bold text-sm transition-all relative
                               ${isMyChoice
-                                  ? 'bg-blue-600 text-white border-black transform -translate-y-1'
+                                  ? 'bg-blue-600 text-white border-black transform -translate-y-1 shadow-md'
                                   : isMySpectatorVote
                                     ? 'bg-purple-500 text-white border-purple-700 transform -translate-y-1'
                                     : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}
                             `}
                           >
                             <div className="flex gap-2 items-start">
-                              <span className={`px-2 bg-black text-white text-xs flex items-center shrink-0`}>{choice.id}</span>
+                              <span className={`px-2 ${isMyChoice ? 'bg-white text-blue-600' : 'bg-black text-white'} text-xs flex items-center shrink-0`}>{choice.id}</span>
                               <span className="flex-1">{choice.text}</span>
+                              {isMyChoice && (
+                                <span className="bg-yellow-400 text-black text-[10px] px-2 py-0.5 rounded-full shrink-0 font-bold">
+                                  선택됨
+                                </span>
+                              )}
                               {isMySpectatorVote && (
                                 <span className="bg-purple-700 text-white text-[10px] px-2 py-0.5 rounded-full shrink-0">
                                   MY VOTE
@@ -227,12 +278,12 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
                     </div>
                  )}
 
-                 {/* Reasoning Input (Read-only if spectator) */}
-                 {(isMyTurn || activeInput.choice || isOpenEnded) && (
+                 {/* Reasoning Input - 로컬 상태 사용 (동시 사용자 충돌 방지) */}
+                 {(isMyTurn || localChoice || isOpenEnded) && (
                    <>
                      <textarea
-                       value={activeInput.reasoning}
-                       onChange={(e) => isMyTurn && onInputChange(activeInput.choice!, e.target.value)}
+                       value={localReasoning}
+                       onChange={(e) => isMyTurn && setLocalReasoning(e.target.value)}
                        disabled={!isMyTurn}
                        placeholder={isMyTurn ? (isOpenEnded ? "답변을 입력하세요..." : "선택 사유를 입력하세요...") : "다른 팀이 사유를 입력중입니다..."}
                        className="w-full p-2 border-2 border-black font-medium text-sm focus:outline-none focus:bg-yellow-50 mb-3 h-24 resize-none disabled:bg-gray-100 disabled:text-gray-500"
@@ -240,9 +291,9 @@ const MobileTeamView: React.FC<MobileTeamViewProps> = ({
 
                      {isMyTurn ? (
                        <button
-                         onClick={onSubmit}
-                         disabled={(!isOpenEnded && !activeInput.choice) || !activeInput.reasoning.trim() || isSaving}
-                         className="w-full py-3 bg-blue-600 text-white font-black uppercase flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50"
+                         onClick={handleSave}
+                         disabled={(!isOpenEnded && !localChoice) || !localReasoning.trim() || isSaving}
+                         className="w-full py-3 bg-blue-600 text-white font-black uppercase flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                        >
                          {isSaving ? (
                            <>
